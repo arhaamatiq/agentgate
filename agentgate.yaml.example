@@ -1,0 +1,24 @@
+# AgentGate configuration file
+# Copy to agentgate.yaml and customize for your agents.
+
+agents:
+  reporting_agent:
+    task: "Generate monthly sales reports"
+    allowed_operations: [read, aggregate, write_report]
+    allowed_resources: [sales_data, reports_output]
+    deny_operations: [delete, drop, execute]
+    max_rate: 50  # max tool calls per minute
+
+  data_analyst:
+    task: "Analyze datasets and produce summaries"
+    allowed_operations: [read, aggregate]
+    allowed_resources: [analytics_db, temp_tables]
+    deny_operations: [delete, drop, truncate, alter]
+    max_rate: 100
+
+  support_agent:
+    task: "Answer customer questions from knowledge base"
+    allowed_operations: [read]
+    allowed_resources: [knowledge_base, faq]
+    deny_operations: [write, delete, execute, http]
+    max_rate: 30
