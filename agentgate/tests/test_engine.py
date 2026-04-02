@@ -207,8 +207,8 @@ class TestPolicyEngineTier2:
         mock_response = MagicMock()
         mock_response.choices = [MagicMock()]
         mock_response.choices[0].message.content = json.dumps({
-            "consistent": True,
-            "confidence": 0.5,
+            "consistent": False,
+            "confidence": 0.3,
             "reversible": True,
             "reasoning": "Uncertain about this action",
         })

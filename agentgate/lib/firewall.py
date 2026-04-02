@@ -20,6 +20,7 @@ import yaml
 
 from agentgate.lib.context import get_context
 from agentgate.lib.engine import PolicyEngine
+from agentgate.lib.engine import register_tools as _engine_register_tools
 from agentgate.lib.models import ScopePolicy, ToolCall, Verdict, VerdictType
 
 logger = logging.getLogger("agentgate")
@@ -152,6 +153,29 @@ def scope(
         yield engine
     finally:
         engine.scope = previous_scope
+
+
+def register_tools(tools: dict[str, dict[str, str]]) -> None:
+    """Register tools with declared action types and resource keys.
+
+    This allows AgentGate to correctly classify tool operations without
+    relying solely on name-based inference. Registered tools take priority
+    over default pattern matching.
+
+    Example::
+
+        agentgate.register_tools({
+            "execute_sql": {"action_type": "database", "resource_key": "query"},
+            "send_email": {"action_type": "communication", "resource_key": "to"},
+            "read_logs": {"action_type": "read", "resource_key": "service"},
+            "update_config": {"action_type": "config", "resource_key": "key"},
+            "deploy_service": {"action_type": "deploy", "resource_key": "service"},
+        })
+
+    Valid action_type values: database, read, write, delete, communication,
+    config, deploy, export, execute.
+    """
+    _engine_register_tools(tools)
 
 
 def guard(func: Any = None, *, tool_name: str = "") -> Any:

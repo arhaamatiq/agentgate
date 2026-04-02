@@ -1,0 +1,1319 @@
+{
+  "attack_payloads": [
+    {
+      "payload": "http://169.254.169.254/latest/meta-data/",
+      "url_tested": "http://169.254.169.254/latest/meta-data/",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Cloud metadata endpoint: 169.254.169.254; Private/internal IP: 169.254.169.254; Obfuscated private IP: 169.254.169.254 \u2192 169.254.169.254",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://localhost:80",
+      "url_tested": "http://localhost:80",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Localhost variant detected: localhost",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://localhost:22",
+      "url_tested": "http://localhost:22",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Localhost variant detected: localhost",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "https://localhost:443",
+      "url_tested": "https://localhost:443",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Localhost variant detected: localhost",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://127.0.0.1:80",
+      "url_tested": "http://127.0.0.1:80",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Localhost variant detected: 127.0.0.1; Private/internal IP: 127.0.0.1; Obfuscated loopback IP: 127.0.0.1 \u2192 127.0.0.1",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://127.0.0.1:22",
+      "url_tested": "http://127.0.0.1:22",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Localhost variant detected: 127.0.0.1; Private/internal IP: 127.0.0.1; Obfuscated loopback IP: 127.0.0.1 \u2192 127.0.0.1",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "https://127.0.0.1:443",
+      "url_tested": "https://127.0.0.1:443",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Localhost variant detected: 127.0.0.1; Private/internal IP: 127.0.0.1; Obfuscated loopback IP: 127.0.0.1 \u2192 127.0.0.1",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://0.0.0.0:80",
+      "url_tested": "http://0.0.0.0:80",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Localhost variant detected: 0.0.0.0; Private/internal IP: 0.0.0.0; Obfuscated private IP: 0.0.0.0 \u2192 0.0.0.0",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://0.0.0.0:22",
+      "url_tested": "http://0.0.0.0:22",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Localhost variant detected: 0.0.0.0; Private/internal IP: 0.0.0.0; Obfuscated private IP: 0.0.0.0 \u2192 0.0.0.0",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "https://0.0.0.0:443",
+      "url_tested": "https://0.0.0.0:443",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Localhost variant detected: 0.0.0.0; Private/internal IP: 0.0.0.0; Obfuscated private IP: 0.0.0.0 \u2192 0.0.0.0",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://[::]:80/",
+      "url_tested": "http://[::]:80/",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Private/internal IP: ::; Obfuscated private IP: :: \u2192 ::",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://[0000::1]:80/",
+      "url_tested": "http://[0000::1]:80/",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Private/internal IP: 0000::1; Obfuscated loopback IP: 0000::1 \u2192 ::1",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://[0:0:0:0:0:ffff:127.0.0.1]",
+      "url_tested": "http://[0:0:0:0:0:ffff:127.0.0.1]",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Private/internal IP: 0:0:0:0:0:ffff:127.0.0.1; Obfuscated loopback IP: 0:0:0:0:0:ffff:127.0.0.1 \u2192 127.0.0.1",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://[::ffff:127.0.0.1]",
+      "url_tested": "http://[::ffff:127.0.0.1]",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Private/internal IP: ::ffff:127.0.0.1; Obfuscated loopback IP: ::ffff:127.0.0.1 \u2192 127.0.0.1",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://127.127.127.127",
+      "url_tested": "http://127.127.127.127",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Localhost variant detected: 127.127.127.127; Private/internal IP: 127.127.127.127; Obfuscated loopback IP: 127.127.127.127 \u2192 127.127.127.127",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://127.0.1.3",
+      "url_tested": "http://127.0.1.3",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Localhost variant detected: 127.0.1.3; Private/internal IP: 127.0.1.3; Obfuscated loopback IP: 127.0.1.3 \u2192 127.0.1.3",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://127.0.0.0",
+      "url_tested": "http://127.0.0.0",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Localhost variant detected: 127.0.0.0; Private/internal IP: 127.0.0.0; Obfuscated loopback IP: 127.0.0.0 \u2192 127.0.0.0",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://0/",
+      "url_tested": "http://0/",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Obfuscated private IP: 0 \u2192 0.0.0.0",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://127.1",
+      "url_tested": "http://127.1",
+      "expected": "block",
+      "actual": "allow",
+      "severity": "low",
+      "reasoning": "URL appears safe",
+      "correct": false,
+      "escalated": false
+    },
+    {
+      "payload": "http://127.0.1",
+      "url_tested": "http://127.0.1",
+      "expected": "block",
+      "actual": "allow",
+      "severity": "low",
+      "reasoning": "URL appears safe",
+      "correct": false,
+      "escalated": false
+    },
+    {
+      "payload": "http://2130706433/",
+      "url_tested": "http://2130706433/",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Localhost variant detected: 2130706433; Obfuscated loopback IP: 2130706433 \u2192 127.0.0.1",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://3232235521/",
+      "url_tested": "http://3232235521/",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Obfuscated private IP: 3232235521 \u2192 192.168.0.1",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://3232235777/",
+      "url_tested": "http://3232235777/",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Obfuscated private IP: 3232235777 \u2192 192.168.1.1",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://2852039166/",
+      "url_tested": "http://2852039166/",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Obfuscated private IP: 2852039166 \u2192 169.254.169.254",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://0177.0.0.1/",
+      "url_tested": "http://0177.0.0.1/",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Localhost variant detected: 0177.0.0.1; Obfuscated loopback IP: 0177.0.0.1 \u2192 127.0.0.1",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://o177.0.0.1/",
+      "url_tested": "http://o177.0.0.1/",
+      "expected": "block",
+      "actual": "allow",
+      "severity": "low",
+      "reasoning": "URL appears safe",
+      "correct": false,
+      "escalated": false
+    },
+    {
+      "payload": "http://0o177.0.0.1/",
+      "url_tested": "http://0o177.0.0.1/",
+      "expected": "block",
+      "actual": "allow",
+      "severity": "low",
+      "reasoning": "URL appears safe",
+      "correct": false,
+      "escalated": false
+    },
+    {
+      "payload": "http://q177.0.0.1/",
+      "url_tested": "http://q177.0.0.1/",
+      "expected": "block",
+      "actual": "allow",
+      "severity": "low",
+      "reasoning": "URL appears safe",
+      "correct": false,
+      "escalated": false
+    },
+    {
+      "payload": "http://0x7f000001",
+      "url_tested": "http://0x7f000001",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Localhost variant detected: 0x7f000001; Obfuscated loopback IP: 0x7f000001 \u2192 127.0.0.1",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://0xc0a80101",
+      "url_tested": "http://0xc0a80101",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Obfuscated private IP: 0xc0a80101 \u2192 192.168.1.1",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://0xa9fea9fe",
+      "url_tested": "http://0xa9fea9fe",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Obfuscated private IP: 0xa9fea9fe \u2192 169.254.169.254",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://127.0.0.1/%61dmin",
+      "url_tested": "http://127.0.0.1/%61dmin",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Localhost variant detected: 127.0.0.1; Private/internal IP: 127.0.0.1; Obfuscated loopback IP: 127.0.0.1 \u2192 127.0.0.1",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://127.0.0.1/%2561dmin",
+      "url_tested": "http://127.0.0.1/%2561dmin",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Localhost variant detected: 127.0.0.1; Private/internal IP: 127.0.0.1; Obfuscated loopback IP: 127.0.0.1 \u2192 127.0.0.1",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://\u24d4\u24e7\u24d0\u24dc\u24df\u24db\u24d4.\u24d2\u24de\u24dc",
+      "url_tested": "http://\u24d4\u24e7\u24d0\u24dc\u24df\u24db\u24d4.\u24d2\u24de\u24dc",
+      "expected": "block",
+      "actual": "allow",
+      "severity": "low",
+      "reasoning": "URL appears safe",
+      "correct": false,
+      "escalated": false
+    },
+    {
+      "payload": "http://ip6-localhost",
+      "url_tested": "http://ip6-localhost",
+      "expected": "block",
+      "actual": "allow",
+      "severity": "low",
+      "reasoning": "URL appears safe",
+      "correct": false,
+      "escalated": false
+    },
+    {
+      "payload": "http://ip6-loopback",
+      "url_tested": "http://ip6-loopback",
+      "expected": "block",
+      "actual": "allow",
+      "severity": "low",
+      "reasoning": "URL appears safe",
+      "correct": false,
+      "escalated": false
+    },
+    {
+      "payload": "http://localhost",
+      "url_tested": "http://localhost",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Localhost variant detected: localhost",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "https://62epax5fhvj3zzmzigyoe5ipkbn7fysllvges3a.302.r3dir.me",
+      "url_tested": "https://62epax5fhvj3zzmzigyoe5ipkbn7fysllvges3a.302.r3dir.me",
+      "expected": "block",
+      "actual": "allow",
+      "severity": "low",
+      "reasoning": "URL appears safe",
+      "correct": false,
+      "escalated": false
+    },
+    {
+      "payload": "http://127.1.1.1:80\\@127.2.2.2:80/",
+      "url_tested": "http://127.1.1.1:80\\@127.2.2.2:80/",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Localhost variant detected: 127.2.2.2; Private/internal IP: 127.2.2.2; Obfuscated loopback IP: 127.2.2.2 \u2192 127.2.2.2; Backslash in netloc \u2014 parser confusion",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://127.1.1.1:80\\@@127.2.2.2:80/",
+      "url_tested": "http://127.1.1.1:80\\@@127.2.2.2:80/",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Localhost variant detected: 127.2.2.2; Private/internal IP: 127.2.2.2; Obfuscated loopback IP: 127.2.2.2 \u2192 127.2.2.2; Multiple @ signs \u2014 URL parser confusion",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://127.1.1.1:80:\\@@127.2.2.2:80/",
+      "url_tested": "http://127.1.1.1:80:\\@@127.2.2.2:80/",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Localhost variant detected: 127.2.2.2; Private/internal IP: 127.2.2.2; Obfuscated loopback IP: 127.2.2.2 \u2192 127.2.2.2; Multiple @ signs \u2014 URL parser confusion",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://127.1.1.1:80#\\@127.2.2.2:80/",
+      "url_tested": "http://127.1.1.1:80#\\@127.2.2.2:80/",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Localhost variant detected: 127.1.1.1; Private/internal IP: 127.1.1.1; Obfuscated loopback IP: 127.1.1.1 \u2192 127.1.1.1",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "file:///etc/passwd",
+      "url_tested": "file:///etc/passwd",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Critical protocol handler: file://",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "file://\\/\\/etc/passwd",
+      "url_tested": "file://\\/\\/etc/passwd",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Critical protocol handler: file://; Backslash in netloc \u2014 parser confusion",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://127.0.0.1:443",
+      "url_tested": "http://127.0.0.1:443",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Localhost variant detected: 127.0.0.1; Private/internal IP: 127.0.0.1; Obfuscated loopback IP: 127.0.0.1 \u2192 127.0.0.1",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "dict://<user>;<auth>@<host>:<port>/d:<word>:<database>:<n>",
+      "url_tested": "dict://<user>;<auth>@<host>:<port>/d:<word>:<database>:<n>",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Critical protocol handler: dict://",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "dict://attacker:11111/",
+      "url_tested": "dict://attacker:11111/",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Critical protocol handler: dict://",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "sftp://evil.com:11111/",
+      "url_tested": "sftp://evil.com:11111/",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "SSRF threats detected: Non-HTTP scheme: sftp://",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "tftp://evil.com:12346/TESTUDPPACKET",
+      "url_tested": "tftp://evil.com:12346/TESTUDPPACKET",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "SSRF threats detected: Non-HTTP scheme: tftp://",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "ldap://localhost:11211/%0astats%0aquit",
+      "url_tested": "ldap://localhost:11211/%0astats%0aquit",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Critical protocol handler: ldap://; Localhost variant detected: localhost",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "gopher://[host]:[port]/[type][selector]",
+      "url_tested": "gopher://[host]:[port]/[type][selector]",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "URL could not be parsed \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "gopher://localhost:25/_MAIL%20FROM:<attacker@example.com>%0D%0A",
+      "url_tested": "gopher://localhost:25/_MAIL%20FROM:<attacker@example.com>%0D%0A",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Critical protocol handler: gopher://; Localhost variant detected: localhost",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://brutelogic.com.br/poc.svg",
+      "url_tested": "http://brutelogic.com.br/poc.svg",
+      "expected": "block",
+      "actual": "allow",
+      "severity": "low",
+      "reasoning": "URL appears safe",
+      "correct": false,
+      "escalated": false
+    },
+    {
+      "payload": "http://instance-data",
+      "url_tested": "http://instance-data",
+      "expected": "block",
+      "actual": "allow",
+      "severity": "low",
+      "reasoning": "URL appears safe",
+      "correct": false,
+      "escalated": false
+    },
+    {
+      "payload": "http://169.254.169.254",
+      "url_tested": "http://169.254.169.254",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Cloud metadata endpoint: 169.254.169.254; Private/internal IP: 169.254.169.254; Obfuscated private IP: 169.254.169.254 \u2192 169.254.169.254",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://169.254.169.254.nip.io/",
+      "url_tested": "http://169.254.169.254.nip.io/",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "SSRF threats detected: DNS rebinding domain: 169.254.169.254.nip.io",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://425.510.425.510 Dotted decimal with overflow",
+      "url_tested": "http://425.510.425.510 Dotted decimal with overflow",
+      "expected": "block",
+      "actual": "allow",
+      "severity": "low",
+      "reasoning": "URL appears safe",
+      "correct": false,
+      "escalated": false
+    },
+    {
+      "payload": "http://2852039166 Dotless decimal",
+      "url_tested": "http://2852039166 Dotless decimal",
+      "expected": "block",
+      "actual": "allow",
+      "severity": "low",
+      "reasoning": "URL appears safe",
+      "correct": false,
+      "escalated": false
+    },
+    {
+      "payload": "http://7147006462 Dotless decimal with overflow",
+      "url_tested": "http://7147006462 Dotless decimal with overflow",
+      "expected": "block",
+      "actual": "allow",
+      "severity": "low",
+      "reasoning": "URL appears safe",
+      "correct": false,
+      "escalated": false
+    },
+    {
+      "payload": "http://0xA9.0xFE.0xA9.0xFE Dotted hexadecimal",
+      "url_tested": "http://0xA9.0xFE.0xA9.0xFE Dotted hexadecimal",
+      "expected": "block",
+      "actual": "allow",
+      "severity": "low",
+      "reasoning": "URL appears safe",
+      "correct": false,
+      "escalated": false
+    },
+    {
+      "payload": "http://0xA9FEA9FE Dotless hexadecimal",
+      "url_tested": "http://0xA9FEA9FE Dotless hexadecimal",
+      "expected": "block",
+      "actual": "allow",
+      "severity": "low",
+      "reasoning": "URL appears safe",
+      "correct": false,
+      "escalated": false
+    },
+    {
+      "payload": "http://0x41414141A9FEA9FE Dotless hexadecimal with overflow",
+      "url_tested": "http://0x41414141A9FEA9FE Dotless hexadecimal with overflow",
+      "expected": "block",
+      "actual": "allow",
+      "severity": "low",
+      "reasoning": "URL appears safe",
+      "correct": false,
+      "escalated": false
+    },
+    {
+      "payload": "http://0251.0376.0251.0376 Dotted octal",
+      "url_tested": "http://0251.0376.0251.0376 Dotted octal",
+      "expected": "block",
+      "actual": "allow",
+      "severity": "low",
+      "reasoning": "URL appears safe",
+      "correct": false,
+      "escalated": false
+    },
+    {
+      "payload": "http://0251.00376.000251.0000376 Dotted octal with padding",
+      "url_tested": "http://0251.00376.000251.0000376 Dotted octal with padding",
+      "expected": "block",
+      "actual": "allow",
+      "severity": "low",
+      "reasoning": "URL appears safe",
+      "correct": false,
+      "escalated": false
+    },
+    {
+      "payload": "http://0251.254.169.254 Mixed encoding (dotted octal + dotted decimal)",
+      "url_tested": "http://0251.254.169.254 Mixed encoding (dotted octal + dotted decimal)",
+      "expected": "block",
+      "actual": "allow",
+      "severity": "low",
+      "reasoning": "URL appears safe",
+      "correct": false,
+      "escalated": false
+    },
+    {
+      "payload": "http://[::ffff:a9fe:a9fe] IPV6 Compressed",
+      "url_tested": "http://[::ffff:a9fe:a9fe] IPV6 Compressed",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "URL could not be parsed \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "http://[0:0:0:0:0:ffff:a9fe:a9fe] IPV6 Expanded",
+      "url_tested": "http://[0:0:0:0:0:ffff:a9fe:a9fe] IPV6 Expanded",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "URL could not be parsed \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "http://[0:0:0:0:0:ffff:169.254.169.254] IPV6/IPV4",
+      "url_tested": "http://[0:0:0:0:0:ffff:169.254.169.254] IPV6/IPV4",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "URL could not be parsed \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "http://[fd00:ec2::254] IPV6",
+      "url_tested": "http://[fd00:ec2::254] IPV6",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "URL could not be parsed \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "http://169.254.169.254/latest/meta-data/iam/security-credentials",
+      "url_tested": "http://169.254.169.254/latest/meta-data/iam/security-credentials",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Cloud metadata endpoint: 169.254.169.254; Private/internal IP: 169.254.169.254; Obfuscated private IP: 169.254.169.254 \u2192 169.254.169.254",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://169.254.169.254/latest/meta-data/iam/security-credentials/[ROLE NAME]",
+      "url_tested": "http://169.254.169.254/latest/meta-data/iam/security-credentials/[ROLE NAME]",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Cloud metadata endpoint: 169.254.169.254; Private/internal IP: 169.254.169.254; Obfuscated private IP: 169.254.169.254 \u2192 169.254.169.254",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://169.254.169.254/latest/user-data",
+      "url_tested": "http://169.254.169.254/latest/user-data",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Cloud metadata endpoint: 169.254.169.254; Private/internal IP: 169.254.169.254; Obfuscated private IP: 169.254.169.254 \u2192 169.254.169.254",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://169.254.169.254/latest/meta-data/ami-id",
+      "url_tested": "http://169.254.169.254/latest/meta-data/ami-id",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Cloud metadata endpoint: 169.254.169.254; Private/internal IP: 169.254.169.254; Obfuscated private IP: 169.254.169.254 \u2192 169.254.169.254",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://169.254.169.254/latest/meta-data/reservation-id",
+      "url_tested": "http://169.254.169.254/latest/meta-data/reservation-id",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Cloud metadata endpoint: 169.254.169.254; Private/internal IP: 169.254.169.254; Obfuscated private IP: 169.254.169.254 \u2192 169.254.169.254",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://169.254.169.254/latest/meta-data/hostname",
+      "url_tested": "http://169.254.169.254/latest/meta-data/hostname",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Cloud metadata endpoint: 169.254.169.254; Private/internal IP: 169.254.169.254; Obfuscated private IP: 169.254.169.254 \u2192 169.254.169.254",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://169.254.169.254/latest/meta-data/public-keys/",
+      "url_tested": "http://169.254.169.254/latest/meta-data/public-keys/",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Cloud metadata endpoint: 169.254.169.254; Private/internal IP: 169.254.169.254; Obfuscated private IP: 169.254.169.254 \u2192 169.254.169.254",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://169.254.169.254/latest/meta-data/public-keys/0/openssh-key",
+      "url_tested": "http://169.254.169.254/latest/meta-data/public-keys/0/openssh-key",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Cloud metadata endpoint: 169.254.169.254; Private/internal IP: 169.254.169.254; Obfuscated private IP: 169.254.169.254 \u2192 169.254.169.254",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://169.254.169.254/latest/meta-data/public-keys/[ID]/openssh-key",
+      "url_tested": "http://169.254.169.254/latest/meta-data/public-keys/[ID]/openssh-key",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Cloud metadata endpoint: 169.254.169.254; Private/internal IP: 169.254.169.254; Obfuscated private IP: 169.254.169.254 \u2192 169.254.169.254",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://169.254.169.254/latest/dynamic/instance-identity/document",
+      "url_tested": "http://169.254.169.254/latest/dynamic/instance-identity/document",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Cloud metadata endpoint: 169.254.169.254; Private/internal IP: 169.254.169.254; Obfuscated private IP: 169.254.169.254 \u2192 169.254.169.254",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://169.254.169.254/latest/meta-data/iam/security-credentials/aws-elasticbeanorastalk-ec2-role",
+      "url_tested": "http://169.254.169.254/latest/meta-data/iam/security-credentials/aws-elasticbeanorastalk-ec2-role",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Cloud metadata endpoint: 169.254.169.254; Private/internal IP: 169.254.169.254; Obfuscated private IP: 169.254.169.254 \u2192 169.254.169.254",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://localhost:9001/2018-06-01/runtime/invocation/next",
+      "url_tested": "http://localhost:9001/2018-06-01/runtime/invocation/next",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Localhost variant detected: localhost",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://${AWS_LAMBDA_RUNTIME_API}/2018-06-01/runtime/invocation/next",
+      "url_tested": "http://${AWS_LAMBDA_RUNTIME_API}/2018-06-01/runtime/invocation/next",
+      "expected": "block",
+      "actual": "allow",
+      "severity": "low",
+      "reasoning": "URL appears safe",
+      "correct": false,
+      "escalated": false
+    },
+    {
+      "payload": "http://169.254.169.254/computeMetadata/v1/",
+      "url_tested": "http://169.254.169.254/computeMetadata/v1/",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Cloud metadata endpoint: 169.254.169.254; Private/internal IP: 169.254.169.254; Obfuscated private IP: 169.254.169.254 \u2192 169.254.169.254",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://metadata.google.internal/computeMetadata/v1/",
+      "url_tested": "http://metadata.google.internal/computeMetadata/v1/",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Cloud metadata endpoint: metadata.google.internal",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://metadata/computeMetadata/v1/",
+      "url_tested": "http://metadata/computeMetadata/v1/",
+      "expected": "block",
+      "actual": "allow",
+      "severity": "low",
+      "reasoning": "URL appears safe",
+      "correct": false,
+      "escalated": false
+    },
+    {
+      "payload": "http://metadata.google.internal/computeMetadata/v1/instance/hostname",
+      "url_tested": "http://metadata.google.internal/computeMetadata/v1/instance/hostname",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Cloud metadata endpoint: metadata.google.internal",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://metadata.google.internal/computeMetadata/v1/instance/id",
+      "url_tested": "http://metadata.google.internal/computeMetadata/v1/instance/id",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Cloud metadata endpoint: metadata.google.internal",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://metadata.google.internal/computeMetadata/v1/project/project-id",
+      "url_tested": "http://metadata.google.internal/computeMetadata/v1/project/project-id",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Cloud metadata endpoint: metadata.google.internal",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://metadata.google.internal/computeMetadata/v1/instance/disks/?recursive=true",
+      "url_tested": "http://metadata.google.internal/computeMetadata/v1/instance/disks/?recursive=true",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Cloud metadata endpoint: metadata.google.internal",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://metadata.google.internal/computeMetadata/v1beta1/",
+      "url_tested": "http://metadata.google.internal/computeMetadata/v1beta1/",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Cloud metadata endpoint: metadata.google.internal",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://metadata.google.internal/computeMetadata/v1beta1/?recursive=true",
+      "url_tested": "http://metadata.google.internal/computeMetadata/v1beta1/?recursive=true",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Cloud metadata endpoint: metadata.google.internal",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "gopher://metadata.google.internal:80/xGET%20/computeMetadata/v1/instance/attributes/ssh-keys%20HTTP%2f%31%2e%31%0AHost:%20metadata.google.internal%0AAccept:%20%2a%2f%2a%0aMetadata-Flavor:%20Google%0d%0a",
+      "url_tested": "gopher://metadata.google.internal:80/xGET%20/computeMetadata/v1/instance/attributes/ssh-keys%20HTTP%2f%31%2e%31%0AHost:%20metadata.google.internal%0AAccept:%20%2a%2f%2a%0aMetadata-Flavor:%20Google%0d%0a",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Critical protocol handler: gopher://; Cloud metadata endpoint: metadata.google.internal",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://metadata.google.internal/computeMetadata/v1beta1/instance/service-accounts/default/token?alt=json",
+      "url_tested": "http://metadata.google.internal/computeMetadata/v1beta1/instance/service-accounts/default/token?alt=json",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Cloud metadata endpoint: metadata.google.internal",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://169.254.169.254/metadata/v1.json",
+      "url_tested": "http://169.254.169.254/metadata/v1.json",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Cloud metadata endpoint: 169.254.169.254; Private/internal IP: 169.254.169.254; Obfuscated private IP: 169.254.169.254 \u2192 169.254.169.254",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://169.254.169.254/metadata/v1/",
+      "url_tested": "http://169.254.169.254/metadata/v1/",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Cloud metadata endpoint: 169.254.169.254; Private/internal IP: 169.254.169.254; Obfuscated private IP: 169.254.169.254 \u2192 169.254.169.254",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://169.254.169.254/metadata/v1/id",
+      "url_tested": "http://169.254.169.254/metadata/v1/id",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Cloud metadata endpoint: 169.254.169.254; Private/internal IP: 169.254.169.254; Obfuscated private IP: 169.254.169.254 \u2192 169.254.169.254",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://169.254.169.254/metadata/v1/user-data",
+      "url_tested": "http://169.254.169.254/metadata/v1/user-data",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Cloud metadata endpoint: 169.254.169.254; Private/internal IP: 169.254.169.254; Obfuscated private IP: 169.254.169.254 \u2192 169.254.169.254",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://169.254.169.254/metadata/v1/hostname",
+      "url_tested": "http://169.254.169.254/metadata/v1/hostname",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Cloud metadata endpoint: 169.254.169.254; Private/internal IP: 169.254.169.254; Obfuscated private IP: 169.254.169.254 \u2192 169.254.169.254",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://169.254.169.254/metadata/v1/region",
+      "url_tested": "http://169.254.169.254/metadata/v1/region",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Cloud metadata endpoint: 169.254.169.254; Private/internal IP: 169.254.169.254; Obfuscated private IP: 169.254.169.254 \u2192 169.254.169.254",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://169.254.169.254/metadata/v1/interfaces/public/0/ipv6/address",
+      "url_tested": "http://169.254.169.254/metadata/v1/interfaces/public/0/ipv6/address",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Cloud metadata endpoint: 169.254.169.254; Private/internal IP: 169.254.169.254; Obfuscated private IP: 169.254.169.254 \u2192 169.254.169.254",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://169.254.169.254/metadata/v1/maintenance",
+      "url_tested": "http://169.254.169.254/metadata/v1/maintenance",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Cloud metadata endpoint: 169.254.169.254; Private/internal IP: 169.254.169.254; Obfuscated private IP: 169.254.169.254 \u2192 169.254.169.254",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://169.254.169.254/metadata/instance?api-version=2017-04-02",
+      "url_tested": "http://169.254.169.254/metadata/instance?api-version=2017-04-02",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Cloud metadata endpoint: 169.254.169.254; Private/internal IP: 169.254.169.254; Obfuscated private IP: 169.254.169.254 \u2192 169.254.169.254",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://169.254.169.254/metadata/instance/network/interface/0/ipv4/ipAddress/0/publicIpAddress?api-version=2017-04-02&format=text",
+      "url_tested": "http://169.254.169.254/metadata/instance/network/interface/0/ipv4/ipAddress/0/publicIpAddress?api-version=2017-04-02&format=text",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Cloud metadata endpoint: 169.254.169.254; Private/internal IP: 169.254.169.254; Obfuscated private IP: 169.254.169.254 \u2192 169.254.169.254",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://169.254.169.254/openstack",
+      "url_tested": "http://169.254.169.254/openstack",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Cloud metadata endpoint: 169.254.169.254; Private/internal IP: 169.254.169.254; Obfuscated private IP: 169.254.169.254 \u2192 169.254.169.254",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://169.254.169.254/2009-04-04/meta-data/",
+      "url_tested": "http://169.254.169.254/2009-04-04/meta-data/",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Cloud metadata endpoint: 169.254.169.254; Private/internal IP: 169.254.169.254; Obfuscated private IP: 169.254.169.254 \u2192 169.254.169.254",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://192.0.0.192/latest/",
+      "url_tested": "http://192.0.0.192/latest/",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Private/internal IP: 192.0.0.192; Obfuscated private IP: 192.0.0.192 \u2192 192.0.0.192",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://192.0.0.192/latest/user-data/",
+      "url_tested": "http://192.0.0.192/latest/user-data/",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Private/internal IP: 192.0.0.192; Obfuscated private IP: 192.0.0.192 \u2192 192.0.0.192",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://192.0.0.192/latest/meta-data/",
+      "url_tested": "http://192.0.0.192/latest/meta-data/",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Private/internal IP: 192.0.0.192; Obfuscated private IP: 192.0.0.192 \u2192 192.0.0.192",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://192.0.0.192/latest/attributes/",
+      "url_tested": "http://192.0.0.192/latest/attributes/",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Private/internal IP: 192.0.0.192; Obfuscated private IP: 192.0.0.192 \u2192 192.0.0.192",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://100.100.100.200/latest/meta-data/",
+      "url_tested": "http://100.100.100.200/latest/meta-data/",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Cloud metadata endpoint: 100.100.100.200; Obfuscated metadata IP: 100.100.100.200 \u2192 100.100.100.200",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://100.100.100.200/latest/meta-data/instance-id",
+      "url_tested": "http://100.100.100.200/latest/meta-data/instance-id",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Cloud metadata endpoint: 100.100.100.200; Obfuscated metadata IP: 100.100.100.200 \u2192 100.100.100.200",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://100.100.100.200/latest/meta-data/image-id",
+      "url_tested": "http://100.100.100.200/latest/meta-data/image-id",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Cloud metadata endpoint: 100.100.100.200; Obfuscated metadata IP: 100.100.100.200 \u2192 100.100.100.200",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://169.254.169.254/hetzner/v1/metadata",
+      "url_tested": "http://169.254.169.254/hetzner/v1/metadata",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Cloud metadata endpoint: 169.254.169.254; Private/internal IP: 169.254.169.254; Obfuscated private IP: 169.254.169.254 \u2192 169.254.169.254",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://169.254.169.254/hetzner/v1/metadata/hostname",
+      "url_tested": "http://169.254.169.254/hetzner/v1/metadata/hostname",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Cloud metadata endpoint: 169.254.169.254; Private/internal IP: 169.254.169.254; Obfuscated private IP: 169.254.169.254 \u2192 169.254.169.254",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://169.254.169.254/hetzner/v1/metadata/instance-id",
+      "url_tested": "http://169.254.169.254/hetzner/v1/metadata/instance-id",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Cloud metadata endpoint: 169.254.169.254; Private/internal IP: 169.254.169.254; Obfuscated private IP: 169.254.169.254 \u2192 169.254.169.254",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://169.254.169.254/hetzner/v1/metadata/public-ipv4",
+      "url_tested": "http://169.254.169.254/hetzner/v1/metadata/public-ipv4",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Cloud metadata endpoint: 169.254.169.254; Private/internal IP: 169.254.169.254; Obfuscated private IP: 169.254.169.254 \u2192 169.254.169.254",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://169.254.169.254/hetzner/v1/metadata/private-networks",
+      "url_tested": "http://169.254.169.254/hetzner/v1/metadata/private-networks",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Cloud metadata endpoint: 169.254.169.254; Private/internal IP: 169.254.169.254; Obfuscated private IP: 169.254.169.254 \u2192 169.254.169.254",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://169.254.169.254/hetzner/v1/metadata/availability-zone",
+      "url_tested": "http://169.254.169.254/hetzner/v1/metadata/availability-zone",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Cloud metadata endpoint: 169.254.169.254; Private/internal IP: 169.254.169.254; Obfuscated private IP: 169.254.169.254 \u2192 169.254.169.254",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://169.254.169.254/hetzner/v1/metadata/region",
+      "url_tested": "http://169.254.169.254/hetzner/v1/metadata/region",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Cloud metadata endpoint: 169.254.169.254; Private/internal IP: 169.254.169.254; Obfuscated private IP: 169.254.169.254 \u2192 169.254.169.254",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "http://127.0.0.1:2375/v1.24/containers/json",
+      "url_tested": "http://127.0.0.1:2375/v1.24/containers/json",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "SSRF threats detected: Localhost variant detected: 127.0.0.1; Private/internal IP: 127.0.0.1; Obfuscated loopback IP: 127.0.0.1 \u2192 127.0.0.1",
+      "correct": true,
+      "escalated": false
+    }
+  ],
+  "safe_payloads": [
+    {
+      "payload": "https://api.stripe.com/v1/charges",
+      "expected": "allow",
+      "actual": "allow",
+      "severity": "low",
+      "reasoning": "URL appears safe",
+      "correct": true,
+      "false_positive": false
+    },
+    {
+      "payload": "https://api.github.com/repos/user/repo",
+      "expected": "allow",
+      "actual": "allow",
+      "severity": "low",
+      "reasoning": "URL appears safe",
+      "correct": true,
+      "false_positive": false
+    },
+    {
+      "payload": "https://hooks.slack.com/services/xxx",
+      "expected": "allow",
+      "actual": "allow",
+      "severity": "low",
+      "reasoning": "URL appears safe",
+      "correct": true,
+      "false_positive": false
+    },
+    {
+      "payload": "https://api.openai.com/v1/chat/completions",
+      "expected": "allow",
+      "actual": "allow",
+      "severity": "low",
+      "reasoning": "URL appears safe",
+      "correct": true,
+      "false_positive": false
+    },
+    {
+      "payload": "https://httpbin.org/post",
+      "expected": "allow",
+      "actual": "allow",
+      "severity": "low",
+      "reasoning": "URL appears safe",
+      "correct": true,
+      "false_positive": false
+    },
+    {
+      "payload": "https://api.anthropic.com/v1/messages",
+      "expected": "allow",
+      "actual": "allow",
+      "severity": "low",
+      "reasoning": "URL appears safe",
+      "correct": true,
+      "false_positive": false
+    },
+    {
+      "payload": "https://api.sendgrid.com/v3/mail/send",
+      "expected": "allow",
+      "actual": "allow",
+      "severity": "low",
+      "reasoning": "URL appears safe",
+      "correct": true,
+      "false_positive": false
+    }
+  ],
+  "files_loaded": [
+    {
+      "source": "PATT-SSRF-README",
+      "url": "https://raw.githubusercontent.com/swisskyrepo/PayloadsAllTheThings/master/Server%20Side%20Request%20Forgery/README.md",
+      "count": 55
+    },
+    {
+      "source": "PATT-SSRF-Cloud",
+      "url": "https://raw.githubusercontent.com/swisskyrepo/PayloadsAllTheThings/master/Server%20Side%20Request%20Forgery/SSRF-Cloud-Instances.md",
+      "count": 70
+    }
+  ],
+  "files_failed": [
+    {
+      "source": "SecLists-SSRF",
+      "url": "https://raw.githubusercontent.com/danielmiessler/SecLists/master/Fuzzing/SSRF/SSRF.txt",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "source": "PATT-Intruder-SSRF",
+      "url": "https://raw.githubusercontent.com/swisskyrepo/PayloadsAllTheThings/master/Server%20Side%20Request%20Forgery/Intruder/SSRF.txt",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "source": "PATT-Intruder-SSRF-url",
+      "url": "https://raw.githubusercontent.com/swisskyrepo/PayloadsAllTheThings/master/Server%20Side%20Request%20Forgery/Intruder/SSRF-url.txt",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "source": "cujanovic-ssrf",
+      "url": "https://raw.githubusercontent.com/cujanovic/SSRF-Testing/master/ssrf-payload-list.txt",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "source": "PortSwigger-ssrf",
+      "url": "https://raw.githubusercontent.com/PortSwigger/ssrf-labs/main/payloads.txt",
+      "error": "HTTP Error 404: Not Found"
+    }
+  ],
+  "summary": {
+    "total_attack": 120,
+    "true_positives": 93,
+    "false_negatives": 27,
+    "escalated_not_blocked": 5,
+    "total_safe": 7,
+    "false_positives": 0,
+    "true_negatives": 7,
+    "recall": 77.5,
+    "precision": 100.0
+  }
+}

@@ -1,0 +1,3554 @@
+{
+  "attack_payloads": [
+    {
+      "payload": ")%20or%20('x'='x",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Injection breakout with boolean operator",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "%20or%201=1",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR num=num)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "; execute immediate 'sel' || 'ect us' || 'er'",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "Injection pattern detected: SQL execution (EXECUTE)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "benchmark(10000000,MD5(1))#",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (BENCHMARK)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "update",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Write operations detected, escalating for review: ['UPDATE']",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "\";waitfor delay '0:0:__TIME__'--",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (WAITFOR DELAY)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "1) or pg_sleep(__TIME__)--",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (PG_SLEEP)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "||(elt(-3+5,bin(15),ord(10),hex(char(45))))",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "\"hi\"\") or (\"\"a\"\"=\"\"a\"",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "delete",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "AST analysis detected destructive operations: ['DELETE']",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "like",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "\" or sleep(__TIME__)#",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (SLEEP)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "pg_sleep(__TIME__)--",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (PG_SLEEP)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "*(|(objectclass=*))",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "declare @q nvarchar (200) 0x730065006c00650063 ...",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Variable declaration injection (DECLARE @)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "or 0=0 #",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR num=num)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "insert",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Write operations detected, escalating for review: ['INSERT']",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "1) or sleep(__TIME__)#",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (SLEEP)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": ") or ('a'='a",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Injection breakout with boolean operator",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "; exec xp_regread",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Stored procedure execution (EXEC)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "*|",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "@var select @var as var into temp end --",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection indicator in statement classified as safe: INTO TEMP table",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "1)) or benchmark(10000000,MD5(1))#",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (BENCHMARK)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "asc",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "(||6)",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "\"a\"\" or 3=3--\"",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR num=num)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "\" or benchmark(10000000,MD5(1))#",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (BENCHMARK)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "or 0=0 --",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR num=num)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "1 waitfor delay '0:0:10'--",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (WAITFOR DELAY)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "or 'a'='a",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "hi or 1=1 --\"",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR num=num)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "or a = a",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "UNION ALL SELECT",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: UNION SELECT injection",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": ") or sleep(__TIME__)='",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (SLEEP)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": ")) or benchmark(10000000,MD5(1))#",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (BENCHMARK)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "hi' or 'a'='a",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "0",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "21 %",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "limit",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "or 1=1",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR num=num)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "or 2 > 1",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "\")) or benchmark(10000000,MD5(1))#",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (BENCHMARK)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "PRINT",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "hi') or ('a'='a",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "or 3=3",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR num=num)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "));waitfor delay '0:0:__TIME__'--",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (WAITFOR DELAY)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "a' waitfor delay '0:0:10'--",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (WAITFOR DELAY)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "1;(load_file(char(47,101,116,99,47,112,97,115, ...",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "Injection pattern detected: SQL file read (LOAD_FILE)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "or%201=1",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR num=num)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "1 or sleep(__TIME__)#",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (SLEEP)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "or 1=1",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR num=num)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "and 1 in (select var from temp)--",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection indicator in statement classified as safe: Does not start with SQL keyword (starts with 'AND')",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "or '7659'='7659",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "or 'text' = n'text'",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "--",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "or 1=1 or ''='",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR num=num)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "declare @s varchar (200) select @s = 0x73656c6 ...",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Variable declaration injection (DECLARE @)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "exec xp",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Stored procedure execution (EXEC)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "; exec master..xp_cmdshell 'ping 172.10.1.255'--",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Stored procedure execution (EXEC)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "3.10E+17",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "\" or pg_sleep(__TIME__)--",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (PG_SLEEP)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "x' AND email IS NULL; --",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "&",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "admin' or '",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "or 'unusual' = 'unusual'",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR 'x'='x')",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "//",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "truncate",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "Destructive SQL operation detected: TRUNCATE",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "1) or benchmark(10000000,MD5(1))#",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (BENCHMARK)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "\\x27UNION SELECT",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: UNION SELECT injection",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "declare @s varchar(200) select @s = 0x77616974 ...",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Variable declaration injection (DECLARE @)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "tz_offset",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "sqlvuln",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "\"));waitfor delay '0:0:__TIME__'--",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (WAITFOR DELAY)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "||6",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "or%201=1 --",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR num=num)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "%2A%28%7C%28objectclass%3D%2A%29%29",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "or a=a",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": ") union select * from information_schema.tables;",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: UNION SELECT injection",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "PRINT @@variable",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "or isNULL(1/0) /*",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "26 %",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "\" or \"a\"=\"a",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Injection breakout with boolean operator",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "(sqlvuln)",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "x' AND members.email IS NULL; --",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "or 1=1--",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR num=num)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "and 1=( if((load_file(char(110,46,101,120,11 ...",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "Injection pattern detected: SQL file read (LOAD_FILE)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "0x770061006900740066006F0072002000640065006C00 ...",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Hex-encoded payload",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "%20'sleep%2050'",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "as",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "1)) or pg_sleep(__TIME__)--",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (PG_SLEEP)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "/**/or/**/1/**/=/**/1",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "union all select @@version--",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: UNION SELECT injection",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": ",@variable",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "(sqlattempt2)",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "or (EXISTS)",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "t'exec master..xp_cmdshell 'nslookup www.googl ...",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Stored procedure execution (EXEC)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "%20$(sleep%2050)",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "1 or benchmark(10000000,MD5(1))#",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (BENCHMARK)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "%20or%20''='",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "||UTL_HTTP.REQUEST",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "or pg_sleep(__TIME__)--",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (PG_SLEEP)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "hi' or 'x'='x';",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR 'x'='x')",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "\") or sleep(__TIME__)=\"",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (SLEEP)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "or 'whatever' in ('whatever')",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "; begin declare @var varchar(8000) set @var=' ...",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Variable declaration injection (DECLARE @)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "union select 1,load_file('/etc/passwd'),1,1,1;",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: UNION SELECT injection",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "0x77616974666F722064656C61792027303A303A313027 ...",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Hex-encoded payload",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "exec(@s)",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "Injection pattern detected: Dynamic SQL execution (EXEC())",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": ") or pg_sleep(__TIME__)--",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (PG_SLEEP)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "union select",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: UNION SELECT injection",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "or sleep(__TIME__)#",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (SLEEP)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "select * from information_schema.tables--",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Schema enumeration (information_schema)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "a' or 1=1--",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR num=num)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "a' or 'a' = 'a",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "declare @s varchar(22) select @s =",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Variable declaration injection (DECLARE @)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "or 2 between 1 and 3",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "or a=a--",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "or '1'='1",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "|",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "or sleep(__TIME__)='",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (SLEEP)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "or 1 --'",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "or 0=0 #\"",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR num=num)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "having",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "a'",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "\" or isNULL(1/0) /*",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Injection breakout with boolean operator",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "declare @s varchar (8000) select @s = 0x73656c ...",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Variable declaration injection (DECLARE @)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "\u00e2\u0080\u0098 or 1=1 --",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR num=num)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "char%4039%41%2b%40SELECT",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection indicator in statement classified as safe: Does not start with SQL keyword (starts with 'CHAR')",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "order by",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "bfilename",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "having 1=1--",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": ") or benchmark(10000000,MD5(1))#",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (BENCHMARK)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "or username like char(37);",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": ";waitfor delay '0:0:__TIME__'--",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (WAITFOR DELAY)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "\" or 1=1--",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR num=num)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "x' AND userid IS NULL; --",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "*/*",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "or 'text' > 't'",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "(select top 1",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection indicator in statement classified as safe: Starts with non-keyword character: '('",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "or benchmark(10000000,MD5(1))#",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (BENCHMARK)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "\");waitfor delay '0:0:__TIME__'--",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (WAITFOR DELAY)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "a' or 3=3--",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR num=num)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "-- &password=",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "group by userid having 1=1--",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "or ''='",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "; exec master..xp_cmdshell",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Stored procedure execution (EXEC)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "%20or%20x=x",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "select",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection indicator in statement classified as safe: Bare SQL keyword without query structure",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "\")) or sleep(__TIME__)=\"",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (SLEEP)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "0x730065006c0065006300740020004000400076006500 ...",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Hex-encoded payload",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "hi' or 1=1 --",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR num=num)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "\") or pg_sleep(__TIME__)--",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (PG_SLEEP)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "%20or%20'x'='x",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "or 'something' = 'some'+'thing'",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR 'x'='x')",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "exec sp",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Stored procedure execution (EXEC)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "29 %",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "(",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "\u00c3\u00bd or 1=1 --",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR num=num)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "1 or pg_sleep(__TIME__)--",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (PG_SLEEP)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "0 or 1=1",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR num=num)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": ") or (a=a",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Injection breakout with boolean operator",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "uni/**/on sel/**/ect",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: UNION SELECT injection",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "replace",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Write operations detected, escalating for review: ['REPLACE']",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "%27%20or%201=1",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR num=num)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": ")) or pg_sleep(__TIME__)--",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (PG_SLEEP)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "%7C",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "x' AND 1=(SELECT COUNT(*) FROM tabname); --",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection indicator in statement classified as safe: Does not start with SQL keyword (starts with 'X')",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "&apos;%20OR",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "; or '1'='1'",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR 'x'='x')",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "declare @q nvarchar (200) select @q = 0x770061 ...",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Variable declaration injection (DECLARE @)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "1 or 1=1",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR num=num)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "; exec ('sel' + 'ect us' + 'er')",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "Injection pattern detected: Dynamic SQL execution (EXEC())",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "23 OR 1=1",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR num=num)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "/",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "anything' OR 'x'='x",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "declare @q nvarchar (4000) select @q =",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Variable declaration injection (DECLARE @)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "or 0=0 --",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR num=num)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "desc",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "||'6",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": ")",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "1)) or sleep(__TIME__)#",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (SLEEP)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "or 0=0 #",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR num=num)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "select name from syscolumns where id = (sele ...",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection indicator in statement classified as safe: syscolumns system table",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "hi or a=a",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "*(|(mail=*))",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "password:*/=1--",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "distinct",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": ");waitfor delay '0:0:__TIME__'--",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (WAITFOR DELAY)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "to_timestamp_tz",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "\") or benchmark(10000000,MD5(1))#",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (BENCHMARK)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "UNION SELECT",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: UNION SELECT injection",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "%2A%28%7C%28mail%3D%2A%29%29",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "+sqlvuln",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "or 1=1 /*",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR num=num)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": ")) or sleep(__TIME__)='",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (SLEEP)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "or 1=1 or \"\"=",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR num=num)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "or 1 in (select @@version)--",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection indicator in statement classified as safe: @@system variable access",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "sqlvuln;",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "union select * from users where login = char ...",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: UNION SELECT injection",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "x' or 1=1 or 'x'='y",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR num=num)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "28 %",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "\u00e2\u0080\u0098 or 3=3 --",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR num=num)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "@variable",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "or '1'='1'--",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR 'x'='x')",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "\"a\"\" or 1=1--\"",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR num=num)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "//*",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "%2A%7C",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "\" or 0=0 --",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR num=num)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "\")) or pg_sleep(__TIME__)--",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (PG_SLEEP)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "?",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "or 1/*",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "!",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "'",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "or a = a",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "declare @q nvarchar (200) select @q = 0x770061006900740066006F0072002000640065006C00610079002000270030003A0030003A0031003000270000 exec(@q)",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "Injection pattern detected: Dynamic SQL execution (EXEC())",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "declare @s varchar(200) select @s = 0x77616974666F722064656C61792027303A303A31302700 exec(@s)",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "Injection pattern detected: Dynamic SQL execution (EXEC())",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "declare @q nvarchar (200) 0x730065006c00650063007400200040004000760065007200730069006f006e00 exec(@q)",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "Injection pattern detected: Dynamic SQL execution (EXEC())",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "declare @s varchar (200) select @s = 0x73656c65637420404076657273696f6e exec(@s)",
+      "expected": "block",
+      "actual": "block",
+      "severity": "critical",
+      "reasoning": "Injection pattern detected: Dynamic SQL execution (EXEC())",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "' or 1=1",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR num=num)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "\u0018 or 1=1 --",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR num=num)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "x' OR full_name LIKE '%Bob%",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "'; exec master..xp_cmdshell 'ping 172.10.1.255'--",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Stored procedure execution (EXEC)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "'%20or%20''='",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Injection breakout with boolean operator",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "'%20or%20'x'='x",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Injection breakout with boolean operator",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "')%20or%20('x'='x",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "' or 0=0 --",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR num=num)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "' or 0=0 #",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR num=num)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "or 0=0 #\"",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR num=num)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "' or 1=1--",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR num=num)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "' or '1'='1'--",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR 'x'='x')",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "' or 1 --'",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Injection breakout with boolean operator",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "or 1=1--",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR num=num)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "' or 1=1 or ''='",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR num=num)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "or 1=1 or \"\"=",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR num=num)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "' or a=a--",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Injection breakout with boolean operator",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "or a=a",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "') or ('a'='a",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "'hi' or 'x'='x';",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR 'x'='x')",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "or",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "procedure",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "handler",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "' or username like '%",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Injection breakout with boolean operator",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "' or uname like '%",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Injection breakout with boolean operator",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "' or userid like '%",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Injection breakout with boolean operator",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "' or uid like '%",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Injection breakout with boolean operator",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "' or user like '%",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Injection breakout with boolean operator",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "'; exec master..xp_cmdshell",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Stored procedure execution (EXEC)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "'; exec xp_regread",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Stored procedure execution (EXEC)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "t'exec master..xp_cmdshell 'nslookup www.google.com'--",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Stored procedure execution (EXEC)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "--sp_password",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "' UNION SELECT",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: UNION SELECT injection",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "' UNION ALL SELECT",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: UNION SELECT injection",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "' or (EXISTS)",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Injection breakout with boolean operator",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "' (select top 1",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection indicator in statement classified as safe: Starts with non-keyword character: \"'\"",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "'||UTL_HTTP.REQUEST",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "1;SELECT%20*",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection indicator in statement classified as safe: Does not start with SQL keyword (starts with '1')",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "<>\"'%;)(&+",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "'%20or%201=1",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR num=num)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "'sqlattempt1",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "%28",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "%29",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "%26",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "%21",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "' or ''='",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Injection breakout with boolean operator",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "' or 3=3",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR num=num)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "\u0018 or 3=3 --",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR num=num)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "%C0%80%27%C0%80%C0%80%C0%80O%C0%82R%C0%80%C0%801%C0%80%C0%A11",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "'-'",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "' '",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "'&'",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "'^'",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "'*'",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "' or ''-'",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Injection breakout with boolean operator",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "' or '' '",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Injection breakout with boolean operator",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "' or ''&'",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Injection breakout with boolean operator",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "' or ''^'",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Injection breakout with boolean operator",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "' or ''*'",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Injection breakout with boolean operator",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "\"-\"",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "\" \"",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "\"&\"",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "\"^\"",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "\"*\"",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "\" or \"\"-\"",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Injection breakout with boolean operator",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "\" or \"\" \"",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Injection breakout with boolean operator",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "\" or \"\"&\"",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Injection breakout with boolean operator",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "\" or \"\"^\"",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Injection breakout with boolean operator",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "\" or \"\"*\"",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Injection breakout with boolean operator",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "or true--",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "\" or true--",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Injection breakout with boolean operator",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "' or true--",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Injection breakout with boolean operator",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "\") or true--",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "') or true--",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "' or 'x'='x",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Injection breakout with boolean operator",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "') or ('x')=('x",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "')) or (('x'))=(('x",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "\" or \"x\"=\"x",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Injection breakout with boolean operator",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "\") or (\"x\")=(\"x",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "\")) or ((\"x\"))=((\"x",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "or 1=1",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR num=num)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "or 1=1--",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR num=num)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "or 1=1#",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR num=num)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "or 1=1/*",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR num=num)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "admin' --",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "admin' #",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "admin'/*",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "admin' or '1'='1",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "admin' or '1'='1'--",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR 'x'='x')",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "admin' or '1'='1'#",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR 'x'='x')",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "admin' or '1'='1'/*",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR 'x'='x')",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "admin'or 1=1 or ''='",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR num=num)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "admin' or 1=1",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR num=num)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "admin' or 1=1--",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR num=num)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "admin' or 1=1#",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR num=num)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "admin' or 1=1/*",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR num=num)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "admin') or ('1'='1",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "admin') or ('1'='1'--",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR 'x'='x')",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "admin') or ('1'='1'#",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR 'x'='x')",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "admin') or ('1'='1'/*",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR 'x'='x')",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "admin') or '1'='1",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "admin') or '1'='1'--",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR 'x'='x')",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "admin') or '1'='1'#",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR 'x'='x')",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "admin') or '1'='1'/*",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR 'x'='x')",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "1234 ' AND 1=0 UNION ALL SELECT 'admin', '81dc9bdb52d04dc20036dbd8313ed055",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: UNION SELECT injection",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "admin\" --",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "admin\" #",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "admin\"/*",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "admin\" or \"1\"=\"1",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "admin\" or \"1\"=\"1\"--",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR \"x\"=\"x\")",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "admin\" or \"1\"=\"1\"#",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR \"x\"=\"x\")",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "admin\" or \"1\"=\"1\"/*",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR \"x\"=\"x\")",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "admin\"or 1=1 or \"\"=\"",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR num=num)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "admin\" or 1=1",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR num=num)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "admin\" or 1=1--",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR num=num)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "admin\" or 1=1#",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR num=num)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "admin\" or 1=1/*",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR num=num)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "admin\") or (\"1\"=\"1",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "admin\") or (\"1\"=\"1\"--",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR \"x\"=\"x\")",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "admin\") or (\"1\"=\"1\"#",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR \"x\"=\"x\")",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "admin\") or (\"1\"=\"1\"/*",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR \"x\"=\"x\")",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "admin\") or \"1\"=\"1",
+      "expected": "block",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Could not determine SQL statement type \u2014 escalating to Tier 2",
+      "correct": false,
+      "escalated": true
+    },
+    {
+      "payload": "admin\") or \"1\"=\"1\"--",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR \"x\"=\"x\")",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "admin\") or \"1\"=\"1\"#",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR \"x\"=\"x\")",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "admin\") or \"1\"=\"1\"/*",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Boolean tautology (OR \"x\"=\"x\")",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "1234 \" AND 1=0 UNION ALL SELECT \"admin\", \"81dc9bdb52d04dc20036dbd8313ed055",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: UNION SELECT injection",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "sleep(__TIME__)#",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (SLEEP)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "1 or sleep(__TIME__)#",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (SLEEP)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "\" or sleep(__TIME__)#",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (SLEEP)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "' or sleep(__TIME__)#",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (SLEEP)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "\" or sleep(__TIME__)=\"",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (SLEEP)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "' or sleep(__TIME__)='",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (SLEEP)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "1) or sleep(__TIME__)#",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (SLEEP)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "\") or sleep(__TIME__)=\"",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (SLEEP)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "') or sleep(__TIME__)='",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (SLEEP)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "1)) or sleep(__TIME__)#",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (SLEEP)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "\")) or sleep(__TIME__)=\"",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (SLEEP)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "')) or sleep(__TIME__)='",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (SLEEP)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": ";waitfor delay '0:0:__TIME__'--",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (WAITFOR DELAY)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": ");waitfor delay '0:0:__TIME__'--",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (WAITFOR DELAY)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "';waitfor delay '0:0:__TIME__'--",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (WAITFOR DELAY)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "\";waitfor delay '0:0:__TIME__'--",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (WAITFOR DELAY)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "');waitfor delay '0:0:__TIME__'--",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (WAITFOR DELAY)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "\");waitfor delay '0:0:__TIME__'--",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (WAITFOR DELAY)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "));waitfor delay '0:0:__TIME__'--",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (WAITFOR DELAY)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "'));waitfor delay '0:0:__TIME__'--",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (WAITFOR DELAY)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "\"));waitfor delay '0:0:__TIME__'--",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (WAITFOR DELAY)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "benchmark(10000000,MD5(1))#",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (BENCHMARK)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "1 or benchmark(10000000,MD5(1))#",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (BENCHMARK)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "\" or benchmark(10000000,MD5(1))#",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (BENCHMARK)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "' or benchmark(10000000,MD5(1))#",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (BENCHMARK)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "1) or benchmark(10000000,MD5(1))#",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (BENCHMARK)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "\") or benchmark(10000000,MD5(1))#",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (BENCHMARK)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "') or benchmark(10000000,MD5(1))#",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (BENCHMARK)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "1)) or benchmark(10000000,MD5(1))#",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (BENCHMARK)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "\")) or benchmark(10000000,MD5(1))#",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (BENCHMARK)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "')) or benchmark(10000000,MD5(1))#",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (BENCHMARK)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "pg_sleep(__TIME__)--",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (PG_SLEEP)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "1 or pg_sleep(__TIME__)--",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (PG_SLEEP)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "\" or pg_sleep(__TIME__)--",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (PG_SLEEP)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "' or pg_sleep(__TIME__)--",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (PG_SLEEP)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "1) or pg_sleep(__TIME__)--",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (PG_SLEEP)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "\") or pg_sleep(__TIME__)--",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (PG_SLEEP)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "') or pg_sleep(__TIME__)--",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (PG_SLEEP)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "1)) or pg_sleep(__TIME__)--",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (PG_SLEEP)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "\")) or pg_sleep(__TIME__)--",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (PG_SLEEP)",
+      "correct": true,
+      "escalated": false
+    },
+    {
+      "payload": "')) or pg_sleep(__TIME__)--",
+      "expected": "block",
+      "actual": "block",
+      "severity": "high",
+      "reasoning": "Injection pattern detected: Time-based blind SQLi (PG_SLEEP)",
+      "correct": true,
+      "escalated": false
+    }
+  ],
+  "safe_payloads": [
+    {
+      "payload": "SELECT id, name FROM users LIMIT 10",
+      "expected": "allow",
+      "actual": "allow",
+      "severity": "low",
+      "reasoning": "Read-only SQL operations: ['SELECT']",
+      "correct": true,
+      "false_positive": false
+    },
+    {
+      "payload": "SELECT COUNT(*) FROM orders WHERE status = 'active'",
+      "expected": "allow",
+      "actual": "allow",
+      "severity": "low",
+      "reasoning": "Read-only SQL operations: ['SELECT']",
+      "correct": true,
+      "false_positive": false
+    },
+    {
+      "payload": "INSERT INTO logs (event, created_at) VALUES ('user_login', NOW())",
+      "expected": "allow",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Write operations detected, escalating for review: ['INSERT']",
+      "correct": true,
+      "false_positive": false
+    },
+    {
+      "payload": "UPDATE users SET last_seen = NOW() WHERE id = 42",
+      "expected": "allow",
+      "actual": "escalate",
+      "severity": "medium",
+      "reasoning": "Write operations detected, escalating for review: ['UPDATE']",
+      "correct": true,
+      "false_positive": false
+    },
+    {
+      "payload": "SELECT * FROM dropdowns WHERE category = 'region'",
+      "expected": "allow",
+      "actual": "allow",
+      "severity": "low",
+      "reasoning": "Read-only SQL operations: ['SELECT']",
+      "correct": true,
+      "false_positive": false
+    },
+    {
+      "payload": "WITH cte AS (SELECT id FROM users) SELECT * FROM cte",
+      "expected": "allow",
+      "actual": "allow",
+      "severity": "low",
+      "reasoning": "Read-only SQL operations: ['SELECT']",
+      "correct": true,
+      "false_positive": false
+    }
+  ],
+  "files_loaded": [
+    {
+      "file": "Generic-SQLi.txt",
+      "url": "https://raw.githubusercontent.com/danielmiessler/SecLists/master/Fuzzing/Databases/SQLi/Generic-SQLi.txt",
+      "count": 267
+    },
+    {
+      "file": "quick-SQLi.txt",
+      "url": "https://raw.githubusercontent.com/danielmiessler/SecLists/master/Fuzzing/Databases/SQLi/quick-SQLi.txt",
+      "count": 77
+    },
+    {
+      "file": "Generic-BlindSQLi.fuzz.txt",
+      "url": "https://raw.githubusercontent.com/danielmiessler/SecLists/master/Fuzzing/Databases/SQLi/Generic-BlindSQLi.fuzzdb.txt",
+      "count": 41
+    }
+  ],
+  "files_failed": [],
+  "summary": {
+    "total_attack": 385,
+    "true_positives": 247,
+    "false_negatives": 138,
+    "escalated_not_blocked": 138,
+    "total_safe": 6,
+    "false_positives": 0,
+    "true_negatives": 6,
+    "recall": 64.16,
+    "precision": 100.0
+  }
+}

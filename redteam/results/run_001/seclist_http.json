@@ -1,0 +1,72 @@
+{
+  "attack_payloads": [],
+  "safe_payloads": [
+    {
+      "payload": "https://api.stripe.com/v1/charges",
+      "expected": "allow",
+      "actual": "allow",
+      "severity": "low",
+      "reasoning": "URL appears safe",
+      "correct": true,
+      "false_positive": false
+    },
+    {
+      "payload": "https://api.github.com/repos/user/repo",
+      "expected": "allow",
+      "actual": "allow",
+      "severity": "low",
+      "reasoning": "URL appears safe",
+      "correct": true,
+      "false_positive": false
+    },
+    {
+      "payload": "https://hooks.slack.com/services/xxx",
+      "expected": "allow",
+      "actual": "allow",
+      "severity": "low",
+      "reasoning": "URL appears safe",
+      "correct": true,
+      "false_positive": false
+    },
+    {
+      "payload": "https://api.openai.com/v1/chat/completions",
+      "expected": "allow",
+      "actual": "allow",
+      "severity": "low",
+      "reasoning": "URL appears safe",
+      "correct": true,
+      "false_positive": false
+    },
+    {
+      "payload": "https://httpbin.org/post",
+      "expected": "allow",
+      "actual": "allow",
+      "severity": "low",
+      "reasoning": "URL appears safe",
+      "correct": true,
+      "false_positive": false
+    }
+  ],
+  "files_loaded": [],
+  "files_failed": [
+    {
+      "file": "SSRF-domain-bypass.txt",
+      "url": "https://raw.githubusercontent.com/danielmiessler/SecLists/master/Fuzzing/SSRF/SSRF-domain-bypass.txt"
+    },
+    {
+      "file": "SSRF-target-IPs.txt",
+      "url": "https://raw.githubusercontent.com/danielmiessler/SecLists/master/Fuzzing/SSRF/SSRF-target-IPs.txt"
+    }
+  ],
+  "summary": {
+    "total_attack": 0,
+    "true_positives": 0,
+    "false_negatives": 0,
+    "escalated_not_blocked": 0,
+    "total_safe": 5,
+    "false_positives": 0,
+    "true_negatives": 5,
+    "recall": 0.0,
+    "precision": 0.0
+  }
+}
