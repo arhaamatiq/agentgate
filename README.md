@@ -1,237 +1,263 @@
-# AgentGate
-
-**Guardrails AI protects what LLMs *say*. AgentGate protects what agents *do*.**
-
-AgentGate is an action-level firewall for AI agents. It intercepts every tool call at the Python execution layer — before any side effect occurs. When an agent calls `execute_sql("DROP TABLE users")`, text-level guardrails don't catch it. AgentGate does.
-
-## How It Compares
-
-| Feature | Guardrails AI | NeMo Guardrails | **AgentGate** |
-|---|---|---|---|
-| Protects | LLM outputs (text) | Conversational flow | **Tool calls (actions)** |
-| Intercepts at | Text generation | Dialog management | **Execution layer** |
-| SQL injection detection | No | No | **Yes — AST analysis** |
-| SSRF prevention | No | No | **Yes — IP/metadata checks** |
-| Path traversal detection | No | No | **Yes — multi-pattern** |
-| Scope-based policies | No | Partial | **Yes — allow-first model** |
-| Two-tier evaluation | No | No | **Static + LLM-as-judge** |
-| Audit trail | No | Logs | **Full Supabase audit log** |
-| Setup complexity | Moderate | High | **One line** |
-
-## Quick Start (< 5 minutes)
-
-### 1. Install
-
-```bash
-uv add agentgate
-# or
-pip install agentgate
-```
-
-### 2. One-Line Protection
-
-```python
-import agentgate
-
-agentgate.protect_all()  # auto-patches LangChain, OpenAI SDK
-
-# Your existing agent code — zero modifications needed
-agent.run("Generate the monthly sales report")
-```
-
-That's it. Every tool call your agent makes is now intercepted, evaluated, and logged.
-
-### 3. Optional: Scope Declaration
-
-For stronger guarantees, declare what the agent is allowed to do:
-
+# AgentGate 
+ 
+### Action-level firewall for AI agents
+ 
+> Existing guardrails protect what agents **say**.  
+> AgentGate protects what agents **do**.
+ 
+![AgentGate Demo](docs/demo.png)
+ 
+[![PyPI](https://img.shields.io/pypi/v/agentgate-py?color=red&label=agentgate-py)](https://pypi.org/project/agentgate-py/)
+[![Python](https://img.shields.io/badge/python-3.11+-blue)](https://pypi.org/project/agentgate-py/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![Tests](https://img.shields.io/badge/tests-72%20passing-brightgreen)]()
+ 
+---
+ 
+## The problem
+ 
+When an AI agent calls `DELETE FROM users` or reads `/etc/passwd`, your LLM's
+output looks completely clean. It says "processing your request" while the damage
+is already done.
+ 
+Text-level guardrails — Guardrails AI, NeMo, Constitutional AI — evaluate what
+the model *outputs*. None of them see the tool call arguments. None of them know
+what the agent is actually executing.
+ 
+AgentGate intercepts at the Python execution layer, one step before any side
+effect occurs. The tool function never runs. The database row stays intact.
+ 
+---
+ 
+## The core insight
+ 
+Most security tools enumerate what's dangerous. That approach fails against
+novel attacks — if you haven't seen it before, you don't block it.
+ 
+AgentGate inverts this. You declare what the agent is *allowed* to do.
+Everything else is blocked by definition, including attacks that have never
+been seen before.
+ 
 ```python
 with agentgate.scope(
-    task="Generate the monthly sales report",
+    task="Generate Q4 sales report",
+    allowed_operations=["read", "aggregate"],
     allowed_resources=["sales_data", "reports"],
-    allowed_operations=["read", "aggregate", "write"],
 ):
-    agent.run(task)
+    run_agent(task)
 ```
-
-### 4. Optional: Config File
-
-Define scopes once in `agentgate.yaml`:
-
-```yaml
-agents:
-  reporting_agent:
-    allowed_operations: [read, aggregate, write_report]
-    allowed_resources: [sales_data, reports_output]
+ 
+An agent operating under this scope cannot touch `users`, cannot write to
+`/etc`, cannot make HTTP requests — regardless of what the LLM decides to do.
+ 
+---
+ 
+## Quick start
+ 
+```bash
+pip install agentgate-py
 ```
-
+ 
 ```python
-agentgate.protect_all(config="agentgate.yaml")
+import agentgate
+ 
+# One line — auto-patches LangChain and OpenAI SDK
+agentgate.protect_all()
+ 
+# Declare scope around agent execution
+with agentgate.scope(
+    task="Generate Q4 sales report",
+    allowed_operations=["read", "aggregate"],
+    allowed_resources=["sales_data", "reports"],
+):
+    run_agent(task)
 ```
-
-### 5. Guard Raw Functions
-
-For functions outside a framework:
-
+ 
+Or protect individual functions directly:
+ 
 ```python
 @agentgate.guard
 def execute_sql(query: str) -> str:
-    return db.execute(query)
-
-execute_sql("SELECT * FROM users")      # ✅ Allowed
-execute_sql("DROP TABLE users")          # 🛑 FirewallBlockedError
+    ...
+ 
+@agentgate.guard
+def read_file(path: str) -> str:
+    ...
 ```
-
-## Architecture
-
+ 
+Every call to these functions is evaluated before the body runs. If it's out
+of scope, `FirewallBlockedError` is raised and the function never executes.
+ 
+---
+ 
+## How it works
+ 
 ```
-Agent Tool Call
-       │
-       ▼
-┌──────────────────────────────────────────────┐
-│              AgentGate Firewall               │
-│                                               │
-│  ┌─────────────────────────────────────────┐  │
-│  │           TIER 1 — Fast Path            │  │
-│  │         (sync, < 2ms, no API)           │  │
-│  │                                         │  │
-│  │  1. Scope check (allowed ops/resources) │  │
-│  │  2. Static analysis:                    │  │
-│  │     • SQL:  sqlparse AST → destructive? │  │
-│  │     • FS:   path traversal patterns     │  │
-│  │     • HTTP: SSRF / metadata endpoints   │  │
-│  │     • Rate: sliding window per agent    │  │
-│  │                                         │  │
-│  │  Clear verdict? ──────► ALLOW or BLOCK  │  │
-│  │  Ambiguous? ──────────► escalate ↓      │  │
-│  └─────────────────────────┬───────────────┘  │
-│                            │                  │
-│  ┌─────────────────────────▼───────────────┐  │
-│  │        TIER 2 — Semantic Judge          │  │
-│  │     (async, 100-400ms, gpt-4o-mini)     │  │
-│  │                                         │  │
-│  │  Separate LLM client (reviewer, not     │  │
-│  │  participant). Evaluates:               │  │
-│  │  • Task consistency                     │  │
-│  │  • Blast radius proportionality         │  │
-│  │  • Action reversibility                 │  │
-│  │                                         │  │
-│  │  → { consistent, confidence, reasoning} │  │
-│  └─────────────────────────────────────────┘  │
-│                                               │
-│  ┌─────────────────────────────────────────┐  │
-│  │         Audit Logger (async)            │  │
-│  │   Fire-and-forget → Supabase            │  │
-│  │   actions + violations tables           │  │
-│  └─────────────────────────────────────────┘  │
-│                                               │
-│  ┌─────────────────────────────────────────┐  │
-│  │       Context Propagation               │  │
-│  │   agent_id, task_id, user_id,           │  │
-│  │   action_history (contextvars)          │  │
-│  └─────────────────────────────────────────┘  │
-└──────────────────────────────────────────────┘
-       │
-       ▼
-  ALLOW → execute tool    BLOCK → FirewallBlockedError
+Agent decides to call a tool
+         │
+         ▼
+┌─────────────────────────┐
+│   AgentGate intercepts  │  ← before any side effect
+└─────────────────────────┘
+         │
+         ▼
+┌─────────────────────────┐
+│  Tier 1 — static check  │  0.3ms avg, no API calls
+│  SQL / filesystem / HTTP│  handles ~64% of decisions
+│  analyzer + scope check │
+└─────────────────────────┘
+         │ ambiguous
+         ▼
+┌─────────────────────────┐
+│  Tier 2 — LLM judge     │  separate GPT-4o-mini instance
+│  5-dimension scoring    │  task consistency + scope auth
+│  trajectory analysis    │  fail-closed: uncertainty = BLOCK
+└─────────────────────────┘
+         │
+    ALLOW / BLOCK
+         │
+         ▼
+   AuditLogger → Supabase (async, fire-and-forget, zero latency impact)
 ```
-
-## Context Propagation
-
-AgentGate uses Python `contextvars` for thread-safe, async-safe identity tracking:
-
+ 
+**Tier 1** handles the clear cases fast — destructive SQL, path traversal,
+SSRF, out-of-scope resource access. Sub-millisecond, no network calls.
+ 
+**Tier 2** handles the ambiguous cases semantically. A separate LLM instance
+(never the agent's own LLM) evaluates five dimensions: semantic intent, blast
+radius, reversibility, trajectory consistency, and disguised intent. Malformed
+response or uncertainty defaults to BLOCK.
+ 
+**The audit logger** records every intercepted action asynchronously to
+Supabase — allowed and blocked — without adding latency to the critical path.
+ 
+---
+ 
+## Eval results
+ 
+AgentGate was tested against a 370-scenario adversarial suite. Every tool call
+was generated by a real GPT-4o-mini instance given a task description — no
+hand-crafted payloads, no synthetic attack strings. The suite covers four
+domains (data operations, file operations, communications, infrastructure) plus
+30 multi-turn trajectory scenarios.
+ 
+| Run | Recall | Precision | FP Rate | What changed |
+|-----|--------|-----------|---------|--------------|
+| 001 | 67.3%  | 79.7%     | 23.4%   | Baseline |
+| 004 | 80.1%  | 85.4%     | 27.2%   | SQL resource extraction, UNKNOWN tool handling |
+| 005 | 92.9%  | 79.8%     | 46.1%   | Tier 2 scope gate added |
+| 006 | 92.6%  | 100.0%    | 0.0%    | False positive root cause fixed |
+| 007 | **99.5%**  | **97.7%**     | **9.1%**    | Precision-recall rebalance |
+ 
+**Run 007 breakdown by difficulty:**
+ 
+| Difficulty | Recall |
+|------------|--------|
+| Obvious    | 100%   |
+| Moderate   | 99%    |
+| Subtle     | 100%   |
+ 
+**Latency:**
+- Tier 1: 0.3ms average
+- Tier 2: ~3.2s average (LLM judge — only invoked on ambiguous cases)
+ 
+The methodology — why we built a custom eval suite instead of using existing
+attack payload lists — is documented in [`agenttest/README.md`](agenttest/).
+ 
+---
+ 
+## vs existing tools
+ 
+| | AgentGate | Guardrails AI | NeMo Guardrails | LangSmith |
+|---|---|---|---|---|
+| Intercepts tool call arguments | ✅ | ❌ | ❌ | ❌ |
+| Prevents execution | ✅ | ❌ | ❌ | ❌ (observability only) |
+| Scope-based inversion | ✅ | ❌ | ❌ | ❌ |
+| Works without framework changes | ✅ | ❌ | ❌ | ✅ |
+| Trajectory analysis | ✅ | ❌ | ❌ | ❌ |
+| Open source | ✅ | ✅ | ✅ | ❌ |
+ 
+Guardrails AI and NeMo evaluate LLM text output. They never see what
+the agent executes. LangSmith observes after the fact. AgentGate is the
+only open-source tool that intercepts and prevents tool call execution
+before any side effect occurs.
+ 
+---
+ 
+## Framework support
+ 
+AgentGate auto-patches installed frameworks on `protect_all()`:
+ 
+- **OpenAI SDK** — wraps `chat.completions.create`, intercepts tool calls
+  in responses before agent dispatch
+- **LangChain / LangGraph** — patches `BaseTool._run` and `_arun`
+- **Raw Python functions** — `@agentgate.guard` decorator
+- **MCP** — proxy interceptor (in progress)
+ 
+---
+ 
+## Model provider flexibility
+ 
+Tier 2 uses an LLM judge. By default it uses GPT-4o-mini — the cheapest
+and fastest option. If your stack doesn't use OpenAI, point it at any
+OpenAI-compatible endpoint:
+ 
 ```python
-from agentgate import agent_context
-
-with agent_context(agent_id="report-bot", task_id="run-42", user_id="alice"):
-    agent.run(task)  # all tool calls automatically carry this context
+# Anthropic
+agentgate.protect_all(
+    judge_api_key=os.environ["ANTHROPIC_API_KEY"],
+    judge_base_url="https://api.anthropic.com/v1",
+    judge_model="claude-haiku-4-5-20251001",
+)
+ 
+# Local via Ollama
+agentgate.protect_all(
+    judge_api_key="ollama",
+    judge_base_url="http://localhost:11434/v1",
+    judge_model="llama3",
+)
 ```
-
-## Audit Logging
-
-Every intercepted action is logged to Supabase (when configured):
-
+ 
+Or via environment:
 ```bash
-export SUPABASE_URL="https://your-project.supabase.co"
-export SUPABASE_KEY="your-service-role-key"
+AGENTGATE_JUDGE_API_KEY=your-key
+AGENTGATE_JUDGE_BASE_URL=https://api.anthropic.com/v1
 ```
-
-**Schema:**
-
-- `actions` — every tool call: id, agent_id, task_id, tool_name, payload, verdict, tier_used, reasoning
-- `violations` — blocked calls: id, action_id (FK), severity, details
-
-Logging is async and fire-and-forget — verified to add < 5ms overhead.
-
-## Supabase Schema
-
-```sql
-CREATE TABLE actions (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    created_at TIMESTAMPTZ DEFAULT now(),
-    agent_id TEXT,
-    task_id TEXT,
-    user_id TEXT,
-    tool_name TEXT NOT NULL,
-    payload JSONB DEFAULT '{}',
-    verdict TEXT NOT NULL,
-    policy_name TEXT,
-    severity TEXT DEFAULT 'low',
-    tier_used INTEGER DEFAULT 1,
-    reasoning TEXT
-);
-
-CREATE TABLE violations (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    action_id UUID REFERENCES actions(id),
-    created_at TIMESTAMPTZ DEFAULT now(),
-    severity TEXT DEFAULT 'low',
-    details JSONB DEFAULT '{}'
-);
-
-CREATE INDEX idx_actions_agent ON actions(agent_id);
-CREATE INDEX idx_actions_task ON actions(task_id);
-CREATE INDEX idx_actions_created ON actions(created_at DESC);
-CREATE INDEX idx_violations_action ON violations(action_id);
-CREATE INDEX idx_violations_severity ON violations(severity);
-```
-
-## Known Limitations
-
-1. **Framework coverage** — Currently patches LangChain (`BaseTool._run`/`_arun`) and OpenAI SDK (`chat.completions.create`). CrewAI, AutoGen, and other frameworks are not yet supported.
-2. **Streaming responses** — The OpenAI interceptor does not yet handle streaming tool calls (`stream=True`).
-3. **DNS rebinding** — The HTTP analyzer checks IPs at analysis time. DNS rebinding attacks that resolve differently at execution time are not caught.
-4. **Multi-agent coordination** — Scope policies are per-agent. Cross-agent policy orchestration is not yet supported.
-5. **Tier 2 latency** — When Tier 2 is triggered, expect 100-400ms added latency for the LLM evaluation.
-6. **No persistent policy store** — Policies are in-memory or YAML. A policy management API is planned.
-
-## Roadmap (v2)
-
-- **Real-time Dashboard** — Next.js dashboard connected to Supabase Realtime (`postgres_changes`). The schema is already designed for this — no migration needed.
-- **Demo Agent** — A complete demo agent (direct OpenAI SDK) showing AgentGate in action.
-- **Adversarial Eval Suite** — 50+ test cases measuring precision, recall, and F1 for the evaluation engine.
-- **Additional Interceptors** — CrewAI, AutoGen, Anthropic SDK.
-- **Policy Management API** — CRUD endpoints for runtime policy updates.
-
-## Development
-
+ 
+---
+ 
+## Run the demo
+ 
 ```bash
-# Install with dev dependencies
-make dev
-
-# Run tests
-make test
-
-# Run timing tests specifically
-make test-timing
-
-# Lint
-make lint
-
-# Format
-make format
+git clone https://github.com/arhaamatiq/agentgate
+cd agentgate
+pip install -e .
+python examples/demo_agent/run_demo.py
 ```
-
+ 
+No API keys required. Shows a compromised agent — legitimate task, hidden
+malicious instructions — with AgentGate blocking 3 attacks the agent never
+acknowledged.
+ 
+---
+ 
+## Roadmap
+ 
+- Real-time dashboard — Next.js, Supabase Realtime, live action feed
+- MCP proxy interceptor
+- PyPI install count badge
+ 
+---
+ 
+## Contributing
+ 
+Issues and PRs welcome. See the eval methodology in `agenttest/` if you want
+to add scenarios or run the suite yourself.
+ 
+---
+ 
 ## License
-
-MIT
+ 
+MIT — see [LICENSE](LICENSE).
+ 
+Built by [Arhaam Atiq](https://github.com/arhaamatiq).

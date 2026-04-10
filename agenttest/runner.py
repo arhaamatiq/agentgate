@@ -9,9 +9,9 @@ from typing import Any
 
 from openai import AsyncOpenAI, APIConnectionError, RateLimitError, APIStatusError
 
-from agentgate.lib.engine import PolicyEngine
-from agentgate.lib.models import ToolCall, ScopePolicy, VerdictType
-from agentgate.lib.context import agent_context, reset_context, get_context
+from agentgate.engine import PolicyEngine
+from agentgate.models import ToolCall, ScopePolicy, VerdictType
+from agentgate.context import agent_context, reset_context, get_context
 
 # ---------------------------------------------------------------------------
 # Tool definitions per domain (OpenAI function-calling format)

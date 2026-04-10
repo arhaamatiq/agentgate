@@ -1,18 +1,23 @@
 [project]
-name = "agentgate"
+name = "agentgate-py"
 version = "0.1.0"
-description = "Action-level firewall for AI agents. Protects what agents DO, not what they say."
+description = "Action-level firewall for AI agents — intercepts tool calls before execution."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
-authors = [{ name = "AgentGate" }]
-
+authors = [{ name = "Arhaam Atiq" }]
+keywords = ["ai-safety", "llm-agents", "guardrails", "firewall", "openai", "langchain", "agent-security"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Security",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
 dependencies = [
     "pydantic>=2.0,<3.0",
-    "fastapi>=0.110.0",
-    "uvicorn>=0.27.0",
     "sqlparse>=0.5.0",
-    "supabase>=2.0.0",
     "openai>=1.12.0",
     "rich>=13.0.0",
     "pyyaml>=6.0",
@@ -21,21 +26,36 @@ dependencies = [
 
 [project.optional-dependencies]
 langchain = ["langchain-core>=0.2.0"]
-all = ["langchain-core>=0.2.0"]
+supabase = ["supabase>=2.0.0"]
+api = ["fastapi>=0.110.0", "uvicorn>=0.27.0"]
+all = ["langchain-core>=0.2.0", "supabase>=2.0.0", "fastapi>=0.110.0", "uvicorn>=0.27.0"]
 dev = [
     "pytest>=8.0.0",
     "pytest-asyncio>=0.23.0",
     "pytest-mock>=3.12.0",
     "ruff>=0.3.0",
+    "build",
+    "twine",
 ]
+
+[project.urls]
+Homepage = "https://github.com/arhaamatiq/agentgate"
+Repository = "https://github.com/arhaamatiq/agentgate"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[tool.hatch.build.targets.wheel]
+packages = ["agentgate"]
+exclude = ["agentgate/demo", "agenttest", "tests"]
+
+[tool.hatch.build.targets.sdist]
+exclude = ["agenttest", ".env", "uv.lock"]
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
-testpaths = ["agentgate/tests"]
+testpaths = ["tests"]
 
 [tool.ruff]
 target-version = "py311"

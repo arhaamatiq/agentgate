@@ -1,10 +1,8 @@
-"""AgentGate — Action-level firewall for AI agents."""
-
+"""AgentGate — action-level firewall for AI agents."""
 from __future__ import annotations
 
 
 def _load_dotenv() -> None:
-    """Load `.env` from the current working directory (walks upward like git)."""
     try:
         from dotenv import find_dotenv, load_dotenv
     except ImportError:
@@ -16,16 +14,22 @@ def _load_dotenv() -> None:
 
 _load_dotenv()
 
-from agentgate.lib.firewall import protect_all, scope, FirewallBlockedError
-from agentgate.lib.context import AgentContext, agent_context
-from agentgate.lib.engine import PolicyEngine, Verdict
+from agentgate.firewall import protect_all, scope, guard, register_tools, FirewallBlockedError
+from agentgate.context import AgentContext, agent_context
+from agentgate.engine import PolicyEngine
+from agentgate.models import Verdict, VerdictType
 
+__version__ = "0.1.0"
 __all__ = [
     "protect_all",
     "scope",
+    "guard",
+    "register_tools",
     "FirewallBlockedError",
     "AgentContext",
     "agent_context",
     "PolicyEngine",
     "Verdict",
+    "VerdictType",
+    "__version__",
 ]
