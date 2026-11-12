@@ -13,6 +13,13 @@ Detection layers:
   - Pattern-based extension/directory matching (with /app/ exemption)
   - Bare sensitive basename matching
   - Base64-encoded path decoding
+
+Location heuristics (system directories, log-file names, broad patterns such
+as ``*.conf`` or ``backups/``) guess that an agent has no business at a path.
+When the path lies inside a resource the scope explicitly grants, that guess
+is superseded by the operator's grant, so a block that rests only on those
+heuristics escalates to Tier 2 instead. Credential files, traversal,
+encoding, null bytes, Windows paths and risky deletes always block.
 """
 
 from __future__ import annotations
@@ -22,7 +29,7 @@ import os
 import re
 import unicodedata
 from dataclasses import dataclass
-from typing import ClassVar
+from typing import ClassVar, Sequence
 from urllib.parse import unquote_to_bytes
 
 from agentgate.models import Severity, VerdictType
@@ -184,6 +191,18 @@ _SENSITIVE_FILES: list[str] = [
     "mkuser.default",
 ]
 
+# Entries of _SENSITIVE_FILES that are listed as log-poisoning targets rather
+# than for what they contain: location heuristics, not credential files.
+_LOG_FILES: frozenset[str] = frozenset({
+    "access.log", "access_log", "accesslog",
+    "error.log", "error_log", "errorlog",
+    "auth.log", "syslog", "messages",
+    "debug.log", "mail.log", "daemon.log",
+    "pure-ftpd.log", "pureftpd.log",
+    "pgadmin.log", "mysql.log", "postgresql.log",
+    "catalina.out",
+})
+
 # ---------------------------------------------------------------------------
 # Sensitive basenames — matched against the filename component only
 # Catches bare filenames with no path prefix (passwd, .pass, db.php, etc.)
@@ -226,6 +245,34 @@ _SENSITIVE_PATH_PATTERNS: list[tuple[re.Pattern[str], str]] = [
 _BASE64_RE = re.compile(r"^[A-Za-z0-9+/]{12,}={0,3}$")
 
 
+def _abs_parts(path: str) -> list[str] | None:
+    """Components of an absolute POSIX path; None if relative or it climbs (..)."""
+    if not path.startswith("/"):
+        return None
+    parts = [p for p in path.split("/") if p not in ("", ".")]
+    return None if ".." in parts else parts
+
+
+def _covering_grant(path: str, granted: Sequence[str], system_dir: str | None) -> str | None:
+    """The granted resource that contains *path*, if any.
+
+    Containment is by whole path components, case-sensitive, and the grant
+    must be absolute and not the root. If the path is in a system directory,
+    the grant must be deeper than that directory: granting ``/var/log/app/``
+    vouches for that subtree, granting ``/etc/`` or ``/var/`` vouches for
+    nothing in particular.
+    """
+    parts = _abs_parts(path)
+    if parts is None:
+        return None
+    min_depth = len([p for p in system_dir.split("/") if p]) + 1 if system_dir else 1
+    for grant in granted:
+        grant_parts = _abs_parts(grant)
+        if grant_parts and len(grant_parts) >= min_depth and parts[: len(grant_parts)] == grant_parts:
+            return grant
+    return None
+
+
 @dataclass
 class FilesystemAnalysisResult:
     """Outcome of analyzing a filesystem path."""
@@ -246,8 +293,13 @@ class FilesystemAnalyzer:
     SYSTEM_DIRS_UNIX: ClassVar[list[str]] = _SYSTEM_DIRS_UNIX
     SYSTEM_DIRS_WINDOWS: ClassVar[list[str]] = _SYSTEM_DIRS_WINDOWS
 
-    def analyze(self, path: str, operation: str = "read") -> FilesystemAnalysisResult:
-        """Analyze a filesystem path for security threats."""
+    def analyze(
+        self, path: str, operation: str = "read", granted: Sequence[str] = ()
+    ) -> FilesystemAnalysisResult:
+        """Analyze a filesystem path for security threats.
+
+        *granted* is the scope's allowed resources; see the module docstring.
+        """
         if not path or not path.strip():
             return FilesystemAnalysisResult(
                 verdict=VerdictType.ALLOW,
@@ -261,6 +313,7 @@ class FilesystemAnalyzer:
 
         threats: list[str] = []
         max_severity = Severity.LOW
+        location_threats = 0  # threats that are location heuristics only
 
         if has_null_bytes:
             threats.append("Null byte injection detected")
@@ -275,10 +328,13 @@ class FilesystemAnalyzer:
 
         normalized = self._normalize_path(decoded)
 
+        unix_system_dir = self._unix_system_dir(normalized)
         system_dir = self._check_system_dirs(normalized)
         if system_dir:
             threats.append(system_dir)
             max_severity = _max_sev(max_severity, Severity.HIGH)
+            if unix_system_dir:
+                location_threats += 1
 
         windows = self._check_windows_path(decoded)
         if windows:
@@ -289,6 +345,8 @@ class FilesystemAnalyzer:
         if sensitive:
             threats.append(sensitive)
             max_severity = _max_sev(max_severity, Severity.HIGH)
+            if not self._check_sensitive_files(normalized, skip=_LOG_FILES):
+                location_threats += 1
 
         basename_threat = self._check_sensitive_basenames(normalized)
         if basename_threat:
@@ -300,6 +358,7 @@ class FilesystemAnalyzer:
             if pattern:
                 threats.append(pattern)
                 max_severity = _max_sev(max_severity, Severity.HIGH)
+                location_threats += 1
 
         b64 = self._check_base64(path)
         if b64:
@@ -340,10 +399,16 @@ class FilesystemAnalyzer:
             )
 
         should_block = max_severity in (Severity.CRITICAL, Severity.HIGH)
+        reasoning = f"Filesystem threats detected: {'; '.join(threats)}"
+        if should_block and location_threats == len(threats) and decoded == path:
+            grant = _covering_grant(path, granted, unix_system_dir)
+            if grant is not None:
+                should_block = False
+                reasoning += f" — inside granted resource '{grant}', escalating to Tier 2"
         return FilesystemAnalysisResult(
             verdict=VerdictType.BLOCK if should_block else VerdictType.ESCALATE,
             severity=max_severity,
-            reasoning=f"Filesystem threats detected: {'; '.join(threats)}",
+            reasoning=reasoning,
             threats=threats,
         )
 
@@ -395,15 +460,26 @@ class FilesystemAnalyzer:
             pass
         return None
 
+    @staticmethod
+    def _unix_system_dir(path: str) -> str | None:
+        """The entry of the Unix system-directory list the path falls under."""
+        path_lower = path.lower().replace("\\", "/")
+        if not path_lower.startswith("/"):
+            path_lower = "/" + path_lower
+        for sys_dir in _SYSTEM_DIRS_UNIX:
+            if path_lower.startswith(sys_dir) or path_lower == sys_dir.rstrip("/"):
+                return sys_dir
+        return None
+
     def _check_system_dirs(self, path: str) -> str | None:
         """Check if the path targets sensitive system directories."""
         path_lower = path.lower().replace("\\", "/")
         if not path_lower.startswith("/"):
             path_lower = "/" + path_lower
 
-        for sys_dir in _SYSTEM_DIRS_UNIX:
-            if path_lower.startswith(sys_dir) or path_lower == sys_dir.rstrip("/"):
-                return f"System directory access: {sys_dir}"
+        sys_dir = self._unix_system_dir(path)
+        if sys_dir:
+            return f"System directory access: {sys_dir}"
 
         check_paths = [path_lower]
         if path_lower.startswith("/"):
@@ -422,11 +498,11 @@ class FilesystemAnalyzer:
             return "Windows drive letter path detected"
         return None
 
-    def _check_sensitive_files(self, path: str) -> str | None:
-        """Check if the path targets known sensitive files."""
+    def _check_sensitive_files(self, path: str, skip: frozenset[str] = frozenset()) -> str | None:
+        """Check if the path targets known sensitive files (other than *skip*)."""
         path_lower = path.lower().replace("\\", "/")
         for sensitive in _SENSITIVE_FILES:
-            if sensitive in path_lower:
+            if sensitive in path_lower and sensitive not in skip:
                 return f"Sensitive file access: {sensitive}"
         return None
 

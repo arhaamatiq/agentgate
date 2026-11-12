@@ -1,0 +1,151 @@
+# AgentGate full stack.
+#
+#   docker compose up -d --build
+#
+#   agents ──► gateway, gateway-2 (Go) ──gRPC──► judge (Python, LLM)
+#                 │      ▲    │
+#                 │      └ redis (trajectories, judge cache, rate limits)
+#                 ├──► mcp-server (only reachable through the gateway)
+#                 └──► kafka ──► auditor (Go) ──► postgres (hash-chained log)
+#
+# Ports on the host: 8080 and 8081 (the two gateway replicas).
+
+x-gateway: &gateway
+  build: { context: ./gateway, args: { VERSION: "0.2.0" } }
+  image: agentgate/gateway:0.2.0
+  command: ["serve", "--config", "/etc/agentgate/policy.yaml"]
+  environment:
+    AGENTGATE_JUDGE_ADDRESS: judge:50051
+    AGENTGATE_REDIS_URL: redis://redis:6379/0
+    AGENTGATE_KAFKA_BROKERS: kafka:9092
+    AGENTGATE_AUDIT_MODE: ${AGENTGATE_AUDIT_MODE:-async}
+    AGENTGATE_JUDGE_CACHE_TTL: ${AGENTGATE_JUDGE_CACHE_TTL:-10m}
+    AGENTGATE_MCP_UPSTREAM: http://mcp-server:9000/mcp
+  volumes:
+    - ./deploy/policy.yaml:/etc/agentgate/policy.yaml:ro
+  healthcheck:
+    test: ["CMD", "/usr/local/bin/agentgate-gateway", "healthcheck"]
+    interval: 5s
+    timeout: 3s
+    retries: 20
+  depends_on:
+    kafka: { condition: service_healthy }
+    redis: { condition: service_healthy }
+    judge: { condition: service_started }
+  networks: [agents, backend]
+  restart: unless-stopped
+
+services:
+  gateway:
+    <<: *gateway
+    ports: ["8080:8080"]
+
+  gateway-2:
+    <<: *gateway
+    ports: ["8081:8080"]
+
+  judge:
+    build: { context: ., dockerfile: Dockerfile.judge }
+    image: agentgate/judge:0.2.0
+    environment:
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      AGENTGATE_JUDGE_MODEL: ${AGENTGATE_JUDGE_MODEL:-gpt-4o-mini}
+      AGENTGATE_JUDGE_BASE_URL: ${AGENTGATE_JUDGE_BASE_URL:-}
+      AGENTGATE_JUDGE_CASSETTE: ${AGENTGATE_JUDGE_CASSETTE:-}
+      AGENTGATE_JUDGE_CASSETTE_MODE: ${AGENTGATE_JUDGE_CASSETTE_MODE:-replay}
+    volumes:
+      - ./bench/cassettes:/cassettes
+    networks: [backend]
+    restart: unless-stopped
+
+  mcp-server:
+    image: agentgate/gateway:0.2.0
+    entrypoint: ["/usr/local/bin/demo-mcp-server"]
+    command: ["http", "--addr", ":9000"]
+    depends_on: [gateway]
+    networks: [backend]
+
+  redis:
+    image: redis:7.4-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory", "256mb", "--maxmemory-policy", "volatile-lru"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      retries: 30
+    networks: [backend]
+
+  kafka:
+    image: apache/kafka:4.1.0
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      KAFKA_LOG_RETENTION_HOURS: 168
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 >/dev/null 2>&1"]
+      interval: 5s
+      timeout: 10s
+      retries: 30
+    networks: [backend]
+
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: agentgate_admin
+      POSTGRES_PASSWORD: ${PG_ADMIN_PASSWORD:-admin-dev-only}
+      POSTGRES_DB: agentgate
+    ports: ["127.0.0.1:55432:5432"] # localhost only: used by bench/stream/tamper.py
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agentgate_admin -d agentgate"]
+      interval: 2s
+      retries: 30
+    networks: [backend]
+
+  auditor-migrate:
+    image: agentgate/gateway:0.2.0
+    entrypoint: ["/usr/local/bin/agentgate-auditor"]
+    command: ["migrate"]
+    environment:
+      AGENTGATE_PG_DSN: postgres://agentgate_admin:${PG_ADMIN_PASSWORD:-admin-dev-only}@postgres:5432/agentgate?sslmode=disable
+      AGENTGATE_PG_WRITER_PASSWORD: ${PG_WRITER_PASSWORD:-writer-dev-only}
+      AGENTGATE_PG_READER_PASSWORD: ${PG_READER_PASSWORD:-reader-dev-only}
+    depends_on:
+      postgres: { condition: service_healthy }
+      gateway: { condition: service_started }
+    networks: [backend]
+    restart: "no"
+
+  auditor:
+    image: agentgate/gateway:0.2.0
+    entrypoint: ["/usr/local/bin/agentgate-auditor"]
+    command: ["run"]
+    environment:
+      # The writer role can INSERT and SELECT only; triggers reject UPDATE,
+      # DELETE and TRUNCATE for every role.
+      AGENTGATE_PG_DSN: postgres://agentgate_writer:${PG_WRITER_PASSWORD:-writer-dev-only}@postgres:5432/agentgate?sslmode=disable
+      AGENTGATE_KAFKA_BROKERS: kafka:9092
+      # DEV ONLY key pair. Generate your own: agentgate-auditor keygen
+      AGENTGATE_AUDIT_SIGNING_KEY: ${AGENTGATE_AUDIT_SIGNING_KEY:-Vn7srjfoQoz0eUyXR/MBVIuM1JvUXVUq0oUBXdju7B0=}
+    depends_on:
+      auditor-migrate: { condition: service_completed_successfully }
+      kafka: { condition: service_healthy }
+    networks: [backend]
+    restart: unless-stopped
+
+networks:
+  agents: {}
+  backend: { internal: false }
+
+volumes:
+  pgdata: {}

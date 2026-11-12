@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agentgate-judge
+  labels: { app.kubernetes.io/name: agentgate-judge }
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app.kubernetes.io/name: agentgate-judge }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: agentgate-judge }
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: judge
+          image: agentgate/judge
+          env:
+            - name: AGENTGATE_JUDGE_MODEL
+              value: gpt-4o-mini
+            - name: OPENAI_API_KEY
+              valueFrom: { secretKeyRef: { name: agentgate-judge, key: api-key, optional: true } }
+          ports: [{ name: grpc, containerPort: 50051 }]
+          readinessProbe:
+            grpc: { port: 50051, service: agentgate.judge.v1.Judge }
+            periodSeconds: 5
+          livenessProbe:
+            grpc: { port: 50051 }
+            periodSeconds: 10
+          resources:
+            requests: { cpu: 100m, memory: 128Mi }
+            limits: { memory: 512Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: [ALL] }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: agentgate-judge
+spec:
+  selector: { app.kubernetes.io/name: agentgate-judge }
+  ports: [{ name: grpc, port: 50051, targetPort: grpc, appProtocol: grpc }]

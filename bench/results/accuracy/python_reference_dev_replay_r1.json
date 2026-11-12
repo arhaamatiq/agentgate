@@ -1,0 +1,24 @@
+{
+  "label": "python_reference_dev_replay_r1",
+  "set": "dev",
+  "engine": "in-process Python PolicyEngine",
+  "judge": "replay:bench/cassettes/dev_live_r1.jsonl",
+  "decisions": 466,
+  "metrics": {
+    "decisions": 466,
+    "TP": 315,
+    "FN": 1,
+    "FP": 9,
+    "TN": 141,
+    "unscored": 0,
+    "recall": 0.9968,
+    "precision": 0.9722,
+    "f1": 0.9844,
+    "fp_rate": 0.06,
+    "accuracy": 0.9785
+  },
+  "prompt_matches": 186,
+  "prompt_misses": 0,
+  "verdicts_differing_from_gateway": 0,
+  "gateway_vs_python_note": "compare with bench/results/accuracy/<gateway run>.json"
+}

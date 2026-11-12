@@ -1,0 +1,71 @@
+syntax = "proto3";
+
+// The Tier 2 contract between the Go gateway and the Python LLM judge.
+//
+// The gateway resolves everything it can deterministically. Only calls the
+// rule path marks ESCALATE reach this service. Any error, timeout, or
+// unavailability on this RPC is treated by the gateway as BLOCK.
+package agentgate.judge.v1;
+
+option go_package = "github.com/arhaamatiq/agentgate/gateway/gen/judgev1;judgev1";
+
+service Judge {
+  rpc Evaluate(EvaluateRequest) returns (EvaluateResponse);
+}
+
+message Scope {
+  string task = 1;
+  repeated string allowed_operations = 2;
+  repeated string allowed_resources = 3;
+  repeated string deny_operations = 4;
+}
+
+message HistoryEntry {
+  string tool_name = 1;
+  // JSON object, key order preserved as the agent sent it.
+  string arguments_json = 2;
+  // "allow" or "block": what the gateway decided for that call.
+  string verdict = 3;
+}
+
+message EvaluateRequest {
+  string request_id = 1;
+  string agent_id = 2;
+  string user_id = 3;
+  string session_id = 4;
+  // Natural-language task. Falls back to scope.task when empty.
+  string task = 5;
+  // Absent means no scope was declared for this agent.
+  optional Scope scope = 6;
+
+  string tool_name = 7;
+  // JSON object, key order preserved as the agent sent it.
+  string arguments_json = 8;
+  // Rule-path classification: sql, filesystem, http, shell, code_exec, unknown.
+  string action_type = 9;
+  // Canonical operation used for the scope check (read, write, send, ...).
+  string operation = 10;
+  // Why the rule path escalated, quoted verbatim in the judge prompt.
+  string tier1_reasoning = 11;
+  // Most recent last. The judge uses at most the last 10.
+  repeated HistoryEntry history = 12;
+}
+
+enum Verdict {
+  VERDICT_UNSPECIFIED = 0;
+  VERDICT_ALLOW = 1;
+  VERDICT_BLOCK = 2;
+}
+
+message EvaluateResponse {
+  Verdict verdict = 1;
+  double confidence = 2;
+  string reasoning = 3;
+  bool reversible = 4;
+  // "llm_judge" for a real judgement, "tier2_error" when the judge itself
+  // failed closed (malformed model output, provider error, ...).
+  string policy_name = 5;
+  string severity = 6;
+  string model = 7;
+  int64 latency_ms = 8;
+}

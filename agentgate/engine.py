@@ -9,9 +9,11 @@ different system prompt, reviewer framing, never the same call.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import re
+import threading
 import time
 from collections import defaultdict
 from typing import Any
@@ -21,12 +23,15 @@ from agentgate.analyzers.http import HTTPAnalyzer
 from agentgate.analyzers.sql import SQLAnalyzer
 from agentgate.context import AgentContext, get_context
 from agentgate.models import (
+    OPERATION_SUBSUMPTION,
+    VERB_OPERATIONS,
     ActionType,
     ScopePolicy,
     Severity,
     ToolCall,
     Verdict,
     VerdictType,
+    tool_verb,
 )
 
 logger = logging.getLogger("agentgate.engine")
@@ -82,6 +87,29 @@ _DEFAULT_OPERATION_PATTERNS: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"^run_command|^execute_command|^shell_|^exec_"), "execute"),
     (re.compile(r"^run_"), "execute"),
 ]
+
+# A filesystem tool is a read only if a word of its name is a read word and
+# none is a mutating one; anything else is a write. Reading is what scopes
+# grant most, so it must not be what an unrecognized tool falls back to.
+# Read words: the read verbs of VERB_OPERATIONS plus file-specific ones.
+_FS_READ_WORDS = frozenset({
+    "read", "list", "get", "describe", "fetch", "show", "check", "inspect", "monitor",
+    "tail", "search", "find", "view", "stat", "cat", "head", "glob", "exists", "count",
+    "info", "tree",
+})
+_FS_MUTATING_WORDS = frozenset({
+    "create", "edit", "move", "rename", "append", "copy", "update", "modify", "overwrite",
+    "truncate", "mkdir", "rmdir", "chmod", "chown", "touch", "patch", "replace", "insert",
+    "put", "set", "add", "make", "empty", "purge", "clear", "restore", "extract", "unzip",
+    "mv", "cp", "rm", "ln", "link", "symlink",
+})
+
+
+def _name_words(tool_name: str) -> set[str]:
+    """Lower-case words of a tool name: readFile, read_file and READ-FILE give {read, file}."""
+    spaced = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", tool_name).lower()
+    return {w for w in re.split(r"[^a-z0-9]+", spaced) if w}
+
 
 # Sensitive field names that indicate data leakage in communication bodies.
 _SENSITIVE_FIELD_NAMES_RE = re.compile(
@@ -139,6 +167,37 @@ _SAFE_DIAGNOSTIC_COMMANDS_RE = re.compile(
     r"systemctl\s+status|journalctl|service\s+\S+\s+status)\b",
     re.IGNORECASE,
 )
+
+_SHELL_METACHARACTERS = frozenset(";|&`$()<>\n\r")
+_SEND_NAME_RE = re.compile(r"^send_|^forward_|^notify_|^post_message|^broadcast_")
+
+
+def _is_plain_diagnostic(cmd: str) -> bool:
+    """A read-only diagnostic that is the whole command line: nothing chained,
+    piped, substituted or redirected (``df -h; cat /etc/shadow`` is not one)."""
+    return bool(_SAFE_DIAGNOSTIC_COMMANDS_RE.match(cmd)) and not any(c in _SHELL_METACHARACTERS for c in cmd)
+
+
+def _shell_command(tool_call: ToolCall) -> str:
+    args = tool_call.arguments
+    return str(args.get("cmd", "") or args.get("command", "") or args.get("args", ""))
+
+
+def _reads_only(tool_call: ToolCall, scope: ScopePolicy) -> bool:
+    """The call only reads: a plain diagnostic command, or a GET/HEAD to a URL
+    the scope's resources explicitly grant."""
+    if tool_call.action_type == ActionType.SHELL:
+        return _is_plain_diagnostic(_shell_command(tool_call))
+    if tool_call.action_type == ActionType.HTTP:
+        method = tool_call.arguments.get("method")
+        if method is not None and not (isinstance(method, str) and method.strip().lower() in ("get", "head")):
+            return False
+        url = tool_call.arguments.get("url", "")
+        if not url:
+            url = tool_call.arguments.get("endpoint", "")
+        return isinstance(url, str) and bool(url) and scope.is_resource_allowed(url) is True
+    return False
+
 
 # High-risk shell command patterns that require explicit scope authorization
 # beyond just "execute". These modify system state in ways that task consistency
@@ -210,12 +269,33 @@ def _classify_action(tool_call: ToolCall) -> ActionType:
     if _SQL_IN_ARGS_RE.search(args_str):
         return ActionType.SQL
     if any(k in args_str for k in ("http://", "https://", "ftp://")):
-        return ActionType.HTTP
+        # A link in a message is content, not a request: send_email(body=
+        # "... https://...") stays a message unless it has a URL to call.
+        if not _SEND_NAME_RE.match(name_lower) or any(k in tool_call.arguments for k in ("url", "endpoint")):
+            return ActionType.HTTP
 
     if re.match(r"^(?:run_command|execute_command|exec_)", name_lower):
         return ActionType.SHELL
 
     return ActionType.UNKNOWN
+
+
+def _sql_args_operation(tool_call: ToolCall) -> str:
+    """The class the SQL in a call's arguments implies on its own."""
+    args_str = json.dumps(tool_call.arguments)
+    if _SQL_DESTRUCTIVE_WB.search(args_str):
+        return "destructive"
+    if _SQL_WRITE_WB.search(args_str):
+        return "write"
+    return "read"
+
+
+def _name_changes_data(name_lower: str) -> str | None:
+    """'write' or 'delete' when the tool's name says the call changes data."""
+    for pattern, operation in _DEFAULT_OPERATION_PATTERNS:
+        if operation in ("write", "delete") and pattern.search(name_lower):
+            return operation
+    return None
 
 
 def _map_operation(action_type: ActionType, tool_call: ToolCall) -> str:
@@ -232,17 +312,21 @@ def _map_operation(action_type: ActionType, tool_call: ToolCall) -> str:
             return _REGISTERED_TYPE_TO_OPERATION[reg_type]
 
     if action_type == ActionType.SQL:
-        args_str = json.dumps(tool_call.arguments)
-        if _SQL_DESTRUCTIVE_WB.search(args_str):
-            return "destructive"
-        if _SQL_WRITE_WB.search(args_str):
-            return "write"
-        return "read"
+        operation = _sql_args_operation(tool_call)
+        # delete_records(condition="id IN (SELECT ...)") is not a read.
+        return operation if operation != "read" else (_name_changes_data(name_lower) or "read")
 
     if action_type == ActionType.FILESYSTEM:
         if any(k in name_lower for k in ("write", "save", "delete", "remove")):
             return "write"
-        return "read"
+        # send_file, upload_file: the recipient and destination checks apply.
+        for pattern, operation in _DEFAULT_OPERATION_PATTERNS:
+            if operation in ("send", "export") and pattern.search(name_lower):
+                return operation
+        words = _name_words(tool_call.tool_name)
+        if words & _FS_READ_WORDS and not words & _FS_MUTATING_WORDS:
+            return "read"
+        return "write"
 
     if action_type == ActionType.HTTP:
         return "http"
@@ -513,8 +597,33 @@ class PolicyEngine:
         if tier1.action != VerdictType.ESCALATE:
             return tier1
 
+        return await self._escalate(tool_call, tier1, get_context())
+
+    def evaluate_full(self, tool_call: ToolCall, timeout: float = 60.0) -> Verdict:
+        """Full two-tier evaluation for synchronous callers.
+
+        ``evaluate`` stops at Tier 1 and may return ESCALATE. Sync interceptors
+        must not treat that as permission, so they call this instead: escalated
+        calls go through Tier 2 on a dedicated background event loop, and any
+        failure or timeout there is a BLOCK.
+        """
+        tier1 = self.evaluate(tool_call)
+        if tier1.action != VerdictType.ESCALATE:
+            return tier1
+
+        ctx = get_context()
+        try:
+            future = asyncio.run_coroutine_threadsafe(
+                self._escalate(tool_call, tier1, ctx), _bridge_loop()
+            )
+            return future.result(timeout=timeout)
+        except Exception as e:
+            logger.error("Tier 2 (sync bridge) failed: %s", e)
+            return tier2_block(f"Tier 2 evaluation failed ({type(e).__name__}) — blocking by default")
+
+    async def _escalate(self, tool_call: ToolCall, tier1: Verdict, ctx: AgentContext) -> Verdict:
         if self._tier2_available:
-            return await self._tier2_evaluate(tool_call, tier1_reasoning=tier1.reasoning)
+            return await self._tier2_evaluate(tool_call, tier1_reasoning=tier1.reasoning, ctx=ctx)
 
         return Verdict(
             action=VerdictType.BLOCK,
@@ -523,6 +632,25 @@ class PolicyEngine:
             severity=Severity.MEDIUM,
             reasoning="Tier 1 ambiguous and Tier 2 unavailable — blocking by default (never fail open)",
         )
+
+    def _operation(self, tool_call: ToolCall) -> str:
+        """The operation the scope is checked against, and the judge is told.
+
+        The inferred class, except that a call which only reads (a plain
+        diagnostic command, a GET to a granted URL) counts as a read when the
+        scope grants reading but not the call's class, and does not deny it.
+        """
+        operation = _map_operation(tool_call.action_type, tool_call)
+        if (
+            self.scope is not None
+            and operation in ("execute", "http")
+            and operation not in self.scope.deny_operations
+            and self.scope.is_operation_allowed(operation, tool_call.tool_name) is False
+            and self.scope.is_operation_allowed("read", tool_call.tool_name) is True
+            and _reads_only(tool_call, self.scope)
+        ):
+            return "read"
+        return operation
 
     def _check_scope(self, tool_call: ToolCall) -> Verdict | None:
         """Check the tool call against the active scope policy.
@@ -533,7 +661,7 @@ class PolicyEngine:
         """
         assert self.scope is not None
 
-        operation = _map_operation(tool_call.action_type, tool_call)
+        operation = self._operation(tool_call)
 
         if operation == "unknown":
             return Verdict(
@@ -544,7 +672,7 @@ class PolicyEngine:
                 reasoning=f"Cannot determine operation type for tool '{tool_call.tool_name}' — escalating to Tier 2",
             )
 
-        op_allowed = self.scope.is_operation_allowed(operation)
+        op_allowed = self.scope.is_operation_allowed(operation, tool_call.tool_name)
         if op_allowed is False:
             return Verdict(
                 action=VerdictType.BLOCK,
@@ -820,7 +948,7 @@ class PolicyEngine:
         # Tier 2 semantic review — scope validation confirms the operation
         # category is permitted, but doesn't prove the specific action is safe.
         if scope_validated:
-            operation = _map_operation(tool_call.action_type, tool_call)
+            operation = self._operation(tool_call)
             if operation == "read":
                 return Verdict(
                     action=VerdictType.ALLOW,
@@ -859,13 +987,8 @@ class PolicyEngine:
         escalated to Tier 2 for semantic review, with high-risk commands
         flagged so Tier 2 applies strict scope-authorization scrutiny.
         """
-        cmd = (
-            tool_call.arguments.get("cmd", "")
-            or tool_call.arguments.get("command", "")
-            or tool_call.arguments.get("args", "")
-        )
-        cmd_str = str(cmd)
-        if cmd_str and scope_validated and _SAFE_DIAGNOSTIC_COMMANDS_RE.match(cmd_str):
+        cmd_str = _shell_command(tool_call)
+        if cmd_str and scope_validated and _is_plain_diagnostic(cmd_str):
             return Verdict(
                 action=VerdictType.ALLOW,
                 tier_used=1,
@@ -898,6 +1021,21 @@ class PolicyEngine:
             query = tool_call.raw_payload or ""
 
         result = self._sql_analyzer.analyze(query)
+        if result.verdict == VerdictType.ALLOW and _sql_args_operation(tool_call) == "read":
+            # The analyzer saw only a read (a subquery in a condition, or
+            # nothing); the tool's name says the call changes data.
+            changes = _name_changes_data(tool_call.tool_name.lower())
+            if changes:
+                return Verdict(
+                    action=VerdictType.ESCALATE,
+                    tier_used=1,
+                    policy_name="sql_analysis",
+                    severity=Severity.MEDIUM,
+                    reasoning=(
+                        f"The SQL in the arguments only reads, but tool '{tool_call.tool_name}' "
+                        f"changes data ({changes}) — escalating to Tier 2"
+                    ),
+                )
         return Verdict(
             action=result.verdict,
             tier_used=1,
@@ -907,7 +1045,11 @@ class PolicyEngine:
         )
 
     def _analyze_filesystem(self, tool_call: ToolCall) -> Verdict:
-        """Run filesystem analyzer on the path argument."""
+        """Run filesystem analyzer on the path argument.
+
+        The scope's allowed resources go along: a block resting only on
+        location heuristics escalates when the path is inside one of them.
+        """
         path = tool_call.arguments.get("path", "")
         if not path:
             path = tool_call.arguments.get("file", "")
@@ -921,7 +1063,8 @@ class PolicyEngine:
         elif any(k in name_lower for k in ("write", "save")):
             operation = "write"
 
-        result = self._fs_analyzer.analyze(path, operation)
+        granted = self.scope.allowed_resources if self.scope else ()
+        result = self._fs_analyzer.analyze(path, operation, granted)
         return Verdict(
             action=result.verdict,
             tier_used=1,
@@ -949,286 +1092,374 @@ class PolicyEngine:
     # Tier 2 — LLM-as-judge
     # ------------------------------------------------------------------
 
-    async def _tier2_evaluate(self, tool_call: ToolCall, *, tier1_reasoning: str = "") -> Verdict:
+    async def _tier2_evaluate(
+        self,
+        tool_call: ToolCall,
+        *,
+        tier1_reasoning: str = "",
+        ctx: AgentContext | None = None,
+    ) -> Verdict:
         """Tier 2: LLM-as-judge with five-dimension scoring.
 
         Uses a SEPARATE OpenAI client instance with a reviewer system prompt.
-        Applies a tiered blocking strategy that gives more weight to the LLM's
-        natural-language assessment (consistent + confidence) than to individual
-        numeric scores, which are noisy.
+        Every failure path returns BLOCK (fail-closed), including errors while
+        building the prompt.
         """
-        ctx = get_context()
-        user_prompt = self._build_tier2_prompt(tool_call, ctx, tier1_reasoning=tier1_reasoning)
-
         try:
-            response = await self._openai_client.chat.completions.create(
-                model=self._tier2_model,
-                messages=[
-                    {"role": "system", "content": _TIER2_SYSTEM_PROMPT},
-                    {"role": "user", "content": user_prompt},
-                ],
-                response_format={"type": "json_object"},
-                temperature=0.0,
-                max_tokens=800,
-            )
-
-            content = response.choices[0].message.content
-            if not content or not content.strip():
-                logger.error("Tier 2: empty response from judge")
-                return self._tier2_block("Empty response from judge — blocking by default")
-
-            try:
-                data = json.loads(content)
-            except json.JSONDecodeError as exc:
-                logger.error("Tier 2: malformed JSON: %s", exc)
-                return self._tier2_block("Malformed JSON from judge — blocking by default")
-
-            # --- Relaxed field validation ---
-            # Only 'consistent' and 'confidence' are truly required.
-            # 'reversible' and 'reasoning' get safe defaults when absent so
-            # that an incomplete but structurally valid JSON doesn't trigger
-            # a fail-closed block on a legitimate call.
-            consistent = data.get("consistent")
-            confidence = data.get("confidence")
-
-            if consistent is None or confidence is None:
-                logger.warning("Tier 2: missing consistent/confidence — applying defaults")
-                if consistent is None:
-                    consistent = True
-                if confidence is None:
-                    confidence = 0.5
-
-            if isinstance(consistent, str):
-                consistent = consistent.lower() in ("true", "yes", "1")
-            if not isinstance(consistent, bool):
-                try:
-                    consistent = bool(consistent)
-                except (ValueError, TypeError):
-                    return self._tier2_block("Invalid type for 'consistent' — blocking by default")
-
-            if not isinstance(confidence, (int, float)):
-                try:
-                    confidence = float(confidence)
-                except (ValueError, TypeError):
-                    return self._tier2_block("Invalid type for 'confidence' — blocking by default")
-
-            confidence = max(0.0, min(1.0, float(confidence)))
-            reversible = data.get("reversible", True)
-            if not isinstance(reversible, bool):
-                reversible = True
-            reasoning = str(data.get("reasoning", "No reasoning provided"))
-
-            # --- Extract optional scores ---
-            score_names = [
-                "scope_compliance_score", "blast_radius_score", "reversibility_score",
-                "trajectory_score", "red_flag_score",
-            ]
-            scores: dict[str, float] = {}
-            for name in score_names:
-                val = data.get(name)
-                if isinstance(val, (int, float)):
-                    scores[name] = float(val)
-
-            # --- Tiered blocking strategy ---
-            # The LLM's consistent + confidence assessment is the primary
-            # signal.  Numeric scores are noisy — they serve as secondary
-            # evidence only when the primary signal is ambiguous.
-
-            should_block: bool
-            if consistent and confidence >= 0.75:
-                # LLM is confident the action is safe and in scope.
-                # Override on dangerous scores — scope_compliance ≥ 4
-                # means the judge saw scope concerns despite claiming confidence.
-                should_block = (
-                    scores.get("red_flag_score", 0) >= 4
-                    or scores.get("scope_compliance_score", 0) >= 4
-                    or (
-                        scores.get("blast_radius_score", 0) >= 4
-                        and scores.get("reversibility_score", 0) >= 4
-                    )
-                )
-            elif consistent and confidence >= 0.50:
-                # LLM thinks it's consistent but is less sure.
-                # Block on any elevated score — this range is where high-risk
-                # system ops without explicit scope authorization should land.
-                should_block = (
-                    any(s >= 4 for s in scores.values())
-                    or (
-                        scores.get("blast_radius_score", 0)
-                        + scores.get("reversibility_score", 0)
-                        >= 7
-                    )
-                )
-            else:
-                # LLM says inconsistent or very low confidence → block.
-                should_block = True
-
-            return Verdict(
-                action=VerdictType.BLOCK if should_block else VerdictType.ALLOW,
-                tier_used=2,
-                policy_name="llm_judge",
-                severity=Severity.HIGH if should_block else Severity.LOW,
-                reasoning=reasoning,
-                confidence=confidence,
-                reversible=reversible,
-            )
-
+            ctx = ctx or get_context()
+            user_prompt = self._build_tier2_prompt(tool_call, ctx, tier1_reasoning=tier1_reasoning)
         except Exception as e:
-            logger.error("Tier 2 evaluation failed: %s", e)
-            return self._tier2_block(
-                f"Tier 2 evaluation failed ({type(e).__name__}) — blocking by default"
-            )
+            logger.error("Tier 2 prompt construction failed: %s", e)
+            return tier2_block(f"Tier 2 evaluation failed ({type(e).__name__}) — blocking by default")
+        return await run_judge(self._openai_client, self._tier2_model, user_prompt)
 
     @staticmethod
     def _tier2_block(reasoning: str) -> Verdict:
         """Helper to produce a fail-closed Tier 2 BLOCK verdict."""
-        return Verdict(
-            action=VerdictType.BLOCK,
-            tier_used=2,
-            policy_name="tier2_error",
-            severity=Severity.MEDIUM,
-            reasoning=reasoning,
-        )
+        return tier2_block(reasoning)
 
     def _build_tier2_prompt(
         self, tool_call: ToolCall, ctx: AgentContext, *, tier1_reasoning: str = ""
     ) -> str:
         """Build a richly contextual prompt for the Tier 2 judge."""
-        task_desc = "Not specified"
-        if ctx.task_description:
-            task_desc = ctx.task_description
-        elif self.scope and self.scope.task:
-            task_desc = self.scope.task
-
-        operation = _map_operation(tool_call.action_type, tool_call)
-
-        sections: list[str] = [
-            f"## Agent Task\n{task_desc}",
-            f"\n## Agent Identity\n- Agent: {ctx.agent_id}\n- User: {ctx.user_id}",
-        ]
-
-        if self.scope:
-            op_allowed = self.scope.is_operation_allowed(operation)
-            subsumption_note = ""
-            if op_allowed is True and operation not in [
-                o.lower() for o in (self.scope.allowed_operations or [])
-            ]:
-                for parent_op in self.scope.allowed_operations or []:
-                    subs = ScopePolicy._OPERATION_SUBSUMPTION.get(parent_op, frozenset())
-                    if operation in subs:
-                        subsumption_note = f" (subsumed by '{parent_op}')"
-                        break
-
-            pre_validation = "not restricted"
-            if op_allowed is True:
-                pre_validation = "YES — permitted" + subsumption_note
-            elif op_allowed is False:
-                pre_validation = "YES — denied"
-
-            sections.append(
-                f"\n## Scope Policy\n"
-                f"- Task: {self.scope.task or 'not declared'}\n"
-                f"- Allowed operations: {self.scope.allowed_operations or 'unrestricted'}\n"
-                f"- Allowed resources: {self.scope.allowed_resources or 'unrestricted'}\n"
-                f"- Denied operations: {self.scope.deny_operations or 'none'}\n"
-                f"- Inferred operation for this call: {operation}\n"
-                f"- Operation pre-validated by Tier 1: {pre_validation}\n"
-            )
-        else:
-            sections.append(
-                "\n## Scope Policy\nNo scope declared — evaluate based on semantic analysis only."
-            )
-
-        if tier1_reasoning:
-            sections.append(
-                f"\n## Tier 1 Escalation Context\n"
-                f"Tier 1 could not make a definitive decision and escalated because:\n"
-                f"  {tier1_reasoning}\n"
-                f"The operation type was already confirmed as permitted by scope. "
-                f"Your job is to evaluate the semantic safety of this specific action."
-            )
-
-        recent = list(ctx.action_history)[-10:]
-        if recent:
-            lines = []
-            for i, action in enumerate(recent, 1):
-                tool = action.get("tool_name", "?")
-                args_summary = json.dumps(action.get("arguments", {}))
-                if len(args_summary) > 200:
-                    args_summary = args_summary[:200] + "..."
-                verdict = action.get("verdict", "?")
-                lines.append(f"  {i}. {tool}({args_summary}) → {verdict}")
-            sections.append(
-                f"\n## Action History (last {len(recent)} actions)\n" + "\n".join(lines)
-            )
-        else:
-            sections.append("\n## Action History\nNo previous actions in this session.")
-
-        args_json = json.dumps(tool_call.arguments, indent=2)
-        if len(args_json) > 2000:
-            args_json = args_json[:2000] + "\n  ...(truncated)"
-        sections.append(
-            f"\n## Current Tool Call Under Review\n"
-            f"- Tool: {tool_call.tool_name}\n"
-            f"- Inferred operation: {operation}\n"
-            f"- Arguments:\n{args_json}\n"
-            f"- Classified as: {tool_call.action_type.value}"
+        return build_judge_prompt(
+            tool_name=tool_call.tool_name,
+            arguments=tool_call.arguments,
+            action_type=tool_call.action_type.value,
+            operation=self._operation(tool_call),
+            scope=self.scope,
+            task_description=ctx.task_description,
+            agent_id=ctx.agent_id,
+            user_id=ctx.user_id,
+            history=list(ctx.action_history),
+            tier1_reasoning=tier1_reasoning,
         )
 
-        red_flags: list[str] = []
-        risk_level = "NORMAL"
-        args_lower = json.dumps(tool_call.arguments).lower()
-        config_key = tool_call.arguments.get("key", "")
-        if _INFRA_RED_FLAG_RE.search(config_key):
-            red_flags.append(f"Security-sensitive config key: {config_key}")
-            risk_level = "HIGH_RISK"
-        if _SENSITIVE_FIELD_NAMES_RE.search(args_lower):
-            red_flags.append("Arguments contain sensitive field names (credentials/keys/tokens)")
-            risk_level = "HIGH_RISK"
-        for key in ("to", "channel", "recipient"):
-            val = str(tool_call.arguments.get(key, ""))
-            if _MASS_AUDIENCE_PATTERNS.search(val):
-                red_flags.append(f"Mass communication target: {val}")
-                risk_level = "HIGH_RISK"
-        dest = tool_call.arguments.get("destination", "")
-        if dest and any(p in str(dest).lower() for p in ("s3://", "sftp://", "ftp://", "external", "partner", "personal")):
-            red_flags.append(f"External/personal export destination: {dest}")
-            risk_level = "HIGH_RISK"
 
-        cmd = tool_call.arguments.get("cmd", "") or tool_call.arguments.get("command", "")
-        if cmd:
-            cmd_s = str(cmd)
-            if _HIGH_RISK_SHELL_RE.search(cmd_s):
-                red_flags.append(f"High-risk shell command: {cmd_s[:120]}")
-                risk_level = "HIGH_RISK"
-            if re.search(r"[12]?>>?\s*\S", cmd_s):
-                red_flags.append(
-                    "Output redirect detected — data may be staged for exfiltration. "
-                    "Check whether the destination is within allowed_resources."
-                )
-                risk_level = "HIGH_RISK"
+# ---------------------------------------------------------------------------
+# Tier 2 as pure functions.
+#
+# The in-process engine and the gRPC judge service (agentgate.judge_service)
+# both call these, so a judge behind the Go gateway sees byte-identical
+# prompts and applies the same decision thresholds.
+# ---------------------------------------------------------------------------
 
-        if tool_call.tool_name.lower() in ("restart_service", "stop_service"):
-            red_flags.append(f"Service lifecycle operation: {tool_call.tool_name}")
-            risk_level = "HIGH_RISK"
 
-        if red_flags:
-            sections.append(
-                f"\n## ⚠ Risk Level: {risk_level}\n"
-                "### Red Flags Detected by Tier 1\n" + "\n".join(f"- {rf}" for rf in red_flags) +
-                "\n\nThese require EXPLICIT scope authorization to allow. "
-                "Generic 'execute' or 'write' is NOT sufficient for high-risk actions."
+_bridge: asyncio.AbstractEventLoop | None = None
+_bridge_lock = threading.Lock()
+
+
+def _bridge_loop() -> asyncio.AbstractEventLoop:
+    """Event loop on a daemon thread that sync callers use to run Tier 2."""
+    global _bridge
+    with _bridge_lock:
+        if _bridge is None:
+            loop = asyncio.new_event_loop()
+            threading.Thread(target=loop.run_forever, name="agentgate-tier2", daemon=True).start()
+            _bridge = loop
+        return _bridge
+
+
+def tier2_block(reasoning: str) -> Verdict:
+    """Produce a fail-closed Tier 2 BLOCK verdict."""
+    return Verdict(
+        action=VerdictType.BLOCK,
+        tier_used=2,
+        policy_name="tier2_error",
+        severity=Severity.MEDIUM,
+        reasoning=reasoning,
+    )
+
+
+def judge_request(model: str, user_prompt: str) -> dict[str, Any]:
+    """Keyword arguments for the judge's chat.completions.create call."""
+    return {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": _TIER2_SYSTEM_PROMPT},
+            {"role": "user", "content": user_prompt},
+        ],
+        "response_format": {"type": "json_object"},
+        "temperature": 0.0,
+        "max_tokens": 800,
+    }
+
+
+async def run_judge(client: Any, model: str, user_prompt: str) -> Verdict:
+    """Call the LLM judge and turn its answer into a verdict. Never raises."""
+    try:
+        response = await client.chat.completions.create(**judge_request(model, user_prompt))
+        return interpret_judge_response(response.choices[0].message.content)
+    except Exception as e:
+        logger.error("Tier 2 evaluation failed: %s", e)
+        return tier2_block(f"Tier 2 evaluation failed ({type(e).__name__}) — blocking by default")
+
+
+def interpret_judge_response(content: str | None) -> Verdict:
+    """Apply the tiered blocking strategy to a raw judge response.
+
+    Gives more weight to the LLM's natural-language assessment (consistent +
+    confidence) than to individual numeric scores, which are noisy. Malformed
+    or empty responses block.
+    """
+    if not content or not content.strip():
+        logger.error("Tier 2: empty response from judge")
+        return tier2_block("Empty response from judge — blocking by default")
+
+    try:
+        data = json.loads(content)
+    except json.JSONDecodeError as exc:
+        logger.error("Tier 2: malformed JSON: %s", exc)
+        return tier2_block("Malformed JSON from judge — blocking by default")
+    if not isinstance(data, dict):
+        return tier2_block("Judge response is not a JSON object — blocking by default")
+
+    # --- Relaxed field validation ---
+    # Only 'consistent' and 'confidence' are truly required.
+    # 'reversible' and 'reasoning' get safe defaults when absent so
+    # that an incomplete but structurally valid JSON doesn't trigger
+    # a fail-closed block on a legitimate call.
+    consistent = data.get("consistent")
+    confidence = data.get("confidence")
+
+    if consistent is None or confidence is None:
+        logger.warning("Tier 2: missing consistent/confidence — applying defaults")
+        if consistent is None:
+            consistent = True
+        if confidence is None:
+            confidence = 0.5
+
+    if isinstance(consistent, str):
+        consistent = consistent.lower() in ("true", "yes", "1")
+    if not isinstance(consistent, bool):
+        try:
+            consistent = bool(consistent)
+        except (ValueError, TypeError):
+            return tier2_block("Invalid type for 'consistent' — blocking by default")
+
+    if not isinstance(confidence, (int, float)):
+        try:
+            confidence = float(confidence)
+        except (ValueError, TypeError):
+            return tier2_block("Invalid type for 'confidence' — blocking by default")
+
+    confidence = max(0.0, min(1.0, float(confidence)))
+    reversible = data.get("reversible", True)
+    if not isinstance(reversible, bool):
+        reversible = True
+    reasoning = str(data.get("reasoning", "No reasoning provided"))
+
+    # --- Extract optional scores ---
+    score_names = [
+        "scope_compliance_score", "blast_radius_score", "reversibility_score",
+        "trajectory_score", "red_flag_score",
+    ]
+    scores: dict[str, float] = {}
+    for name in score_names:
+        val = data.get(name)
+        if isinstance(val, (int, float)):
+            scores[name] = float(val)
+
+    # --- Tiered blocking strategy ---
+    # The LLM's consistent + confidence assessment is the primary
+    # signal.  Numeric scores are noisy — they serve as secondary
+    # evidence only when the primary signal is ambiguous.
+
+    should_block: bool
+    if consistent and confidence >= 0.75:
+        # LLM is confident the action is safe and in scope.
+        # Override on dangerous scores — scope_compliance ≥ 4
+        # means the judge saw scope concerns despite claiming confidence.
+        should_block = (
+            scores.get("red_flag_score", 0) >= 4
+            or scores.get("scope_compliance_score", 0) >= 4
+            or (
+                scores.get("blast_radius_score", 0) >= 4
+                and scores.get("reversibility_score", 0) >= 4
             )
+        )
+    elif consistent and confidence >= 0.50:
+        # LLM thinks it's consistent but is less sure.
+        # Block on any elevated score — this range is where high-risk
+        # system ops without explicit scope authorization should land.
+        should_block = (
+            any(s >= 4 for s in scores.values())
+            or (
+                scores.get("blast_radius_score", 0)
+                + scores.get("reversibility_score", 0)
+                >= 7
+            )
+        )
+    else:
+        # LLM says inconsistent or very low confidence → block.
+        should_block = True
+
+    return Verdict(
+        action=VerdictType.BLOCK if should_block else VerdictType.ALLOW,
+        tier_used=2,
+        policy_name="llm_judge",
+        severity=Severity.HIGH if should_block else Severity.LOW,
+        reasoning=reasoning,
+        confidence=confidence,
+        reversible=reversible,
+    )
+
+
+def build_judge_prompt(
+    *,
+    tool_name: str,
+    arguments: dict[str, Any],
+    action_type: str,
+    operation: str,
+    scope: ScopePolicy | None,
+    task_description: str = "",
+    agent_id: str = "",
+    user_id: str = "",
+    history: list[dict[str, Any]] | None = None,
+    tier1_reasoning: str = "",
+) -> str:
+    """Build the Tier 2 judge's user prompt from explicit inputs."""
+    task_desc = "Not specified"
+    if task_description:
+        task_desc = task_description
+    elif scope and scope.task:
+        task_desc = scope.task
+
+    sections: list[str] = [
+        f"## Agent Task\n{task_desc}",
+        f"\n## Agent Identity\n- Agent: {agent_id}\n- User: {user_id}",
+    ]
+
+    if scope:
+        op_allowed = scope.is_operation_allowed(operation, tool_name)
+        subsumption_note = ""
+        if op_allowed is True and scope.is_operation_allowed(operation) is False:
+            # Only the tool-verb or tool-name layer allows it; calls allowed
+            # before those layers existed keep their prompt byte for byte.
+            verb = tool_verb(tool_name)
+            if verb in (scope.allowed_operations or []) and operation in VERB_OPERATIONS.get(verb, frozenset()):
+                subsumption_note = f" (declared as '{verb}', the verb of tool '{tool_name}')"
+            else:
+                subsumption_note = f" (the scope names the tool '{tool_name}')"
+        elif op_allowed is True and operation not in [
+            o.lower() for o in (scope.allowed_operations or [])
+        ]:
+            for parent_op in scope.allowed_operations or []:
+                subs = OPERATION_SUBSUMPTION.get(parent_op, frozenset())
+                if operation in subs:
+                    subsumption_note = f" (subsumed by '{parent_op}')"
+                    break
+
+        pre_validation = "not restricted"
+        if op_allowed is True:
+            pre_validation = "YES — permitted" + subsumption_note
+        elif op_allowed is False:
+            pre_validation = "YES — denied"
 
         sections.append(
-            "\n## Your Task\n"
-            "Evaluate this action. Focus on what the call ACTUALLY DOES:\n"
-            "1. SCOPE COMPLIANCE — Is the action authorised by scope?\n"
-            "2. PROPORTIONALITY — Is the impact proportionate and recoverable?\n"
-            "3. RED FLAGS — Does this trigger any red flag categories?\n\n"
-            "If the operation was already confirmed as permitted and the action "
-            "is proportionate with no red flags, ALLOW with high confidence.\n"
-            "Return your JSON verdict."
+            f"\n## Scope Policy\n"
+            f"- Task: {scope.task or 'not declared'}\n"
+            f"- Allowed operations: {scope.allowed_operations or 'unrestricted'}\n"
+            f"- Allowed resources: {scope.allowed_resources or 'unrestricted'}\n"
+            f"- Denied operations: {scope.deny_operations or 'none'}\n"
+            f"- Inferred operation for this call: {operation}\n"
+            f"- Operation pre-validated by Tier 1: {pre_validation}\n"
+        )
+    else:
+        sections.append(
+            "\n## Scope Policy\nNo scope declared — evaluate based on semantic analysis only."
         )
 
-        return "\n".join(sections)
+    if tier1_reasoning:
+        sections.append(
+            f"\n## Tier 1 Escalation Context\n"
+            f"Tier 1 could not make a definitive decision and escalated because:\n"
+            f"  {tier1_reasoning}\n"
+            f"The operation type was already confirmed as permitted by scope. "
+            f"Your job is to evaluate the semantic safety of this specific action."
+        )
+
+    recent = list(history or [])[-10:]
+    if recent:
+        lines = []
+        for i, action in enumerate(recent, 1):
+            tool = action.get("tool_name", "?")
+            args_summary = json.dumps(action.get("arguments", {}))
+            if len(args_summary) > 200:
+                args_summary = args_summary[:200] + "..."
+            verdict = action.get("verdict", "?")
+            lines.append(f"  {i}. {tool}({args_summary}) → {verdict}")
+        sections.append(
+            f"\n## Action History (last {len(recent)} actions)\n" + "\n".join(lines)
+        )
+    else:
+        sections.append("\n## Action History\nNo previous actions in this session.")
+
+    args_json = json.dumps(arguments, indent=2)
+    if len(args_json) > 2000:
+        args_json = args_json[:2000] + "\n  ...(truncated)"
+    sections.append(
+        f"\n## Current Tool Call Under Review\n"
+        f"- Tool: {tool_name}\n"
+        f"- Inferred operation: {operation}\n"
+        f"- Arguments:\n{args_json}\n"
+        f"- Classified as: {action_type}"
+    )
+
+    red_flags: list[str] = []
+    risk_level = "NORMAL"
+    args_lower = json.dumps(arguments).lower()
+    config_key = arguments.get("key", "")
+    if _INFRA_RED_FLAG_RE.search(str(config_key)):
+        red_flags.append(f"Security-sensitive config key: {config_key}")
+        risk_level = "HIGH_RISK"
+    if _SENSITIVE_FIELD_NAMES_RE.search(args_lower):
+        red_flags.append("Arguments contain sensitive field names (credentials/keys/tokens)")
+        risk_level = "HIGH_RISK"
+    for key in ("to", "channel", "recipient"):
+        val = str(arguments.get(key, ""))
+        if _MASS_AUDIENCE_PATTERNS.search(val):
+            red_flags.append(f"Mass communication target: {val}")
+            risk_level = "HIGH_RISK"
+    dest = arguments.get("destination", "")
+    if dest and any(p in str(dest).lower() for p in ("s3://", "sftp://", "ftp://", "external", "partner", "personal")):
+        red_flags.append(f"External/personal export destination: {dest}")
+        risk_level = "HIGH_RISK"
+
+    cmd = arguments.get("cmd", "") or arguments.get("command", "")
+    if cmd:
+        cmd_s = str(cmd)
+        if _HIGH_RISK_SHELL_RE.search(cmd_s):
+            red_flags.append(f"High-risk shell command: {cmd_s[:120]}")
+            risk_level = "HIGH_RISK"
+        if re.search(r"[12]?>>?\s*\S", cmd_s):
+            red_flags.append(
+                "Output redirect detected — data may be staged for exfiltration. "
+                "Check whether the destination is within allowed_resources."
+            )
+            risk_level = "HIGH_RISK"
+
+    if tool_name.lower() in ("restart_service", "stop_service"):
+        red_flags.append(f"Service lifecycle operation: {tool_name}")
+        risk_level = "HIGH_RISK"
+
+    if red_flags:
+        sections.append(
+            f"\n## ⚠ Risk Level: {risk_level}\n"
+            "### Red Flags Detected by Tier 1\n" + "\n".join(f"- {rf}" for rf in red_flags) +
+            "\n\nThese require EXPLICIT scope authorization to allow. "
+            "Generic 'execute' or 'write' is NOT sufficient for high-risk actions."
+        )
+
+    sections.append(
+        "\n## Your Task\n"
+        "Evaluate this action. Focus on what the call ACTUALLY DOES:\n"
+        "1. SCOPE COMPLIANCE — Is the action authorised by scope?\n"
+        "2. PROPORTIONALITY — Is the impact proportionate and recoverable?\n"
+        "3. RED FLAGS — Does this trigger any red flag categories?\n\n"
+        "If the operation was already confirmed as permitted and the action "
+        "is proportionate with no red flags, ALLOW with high confidence.\n"
+        "Return your JSON verdict."
+    )
+
+    return "\n".join(sections)

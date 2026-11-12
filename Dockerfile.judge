@@ -1,0 +1,11 @@
+# AgentGate Tier 2 LLM judge (gRPC). Built from this repository so it ships
+# the exact prompt and thresholds the Python library uses.
+FROM python:3.12-slim
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1
+WORKDIR /app
+COPY pyproject.toml README.md LICENSE ./
+COPY agentgate ./agentgate
+RUN pip install ".[judge]" && useradd --uid 10001 --create-home judge
+USER 10001
+EXPOSE 50051
+ENTRYPOINT ["agentgate-judge"]

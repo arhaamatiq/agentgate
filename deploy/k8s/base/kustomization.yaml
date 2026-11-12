@@ -1,0 +1,32 @@
+# AgentGate on Kubernetes (base).
+#
+# Expects Kafka, PostgreSQL and Redis at the addresses in the agentgate-env
+# ConfigMap; overlays/dev runs single-node copies of all three in-cluster.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: agentgate
+labels:
+  - pairs: { app.kubernetes.io/part-of: agentgate }
+    includeSelectors: false
+resources:
+  - namespace.yaml
+  - gateway.yaml
+  - judge.yaml
+  - auditor.yaml
+  - mcp-server.yaml
+  - networkpolicy.yaml
+configMapGenerator:
+  - name: agentgate-policy
+    files: [policy.yaml]
+  - name: agentgate-env
+    literals:
+      - AGENTGATE_JUDGE_ADDRESS=agentgate-judge:50051
+      - AGENTGATE_REDIS_URL=redis://redis:6379/0
+      - AGENTGATE_KAFKA_BROKERS=kafka:9092
+      - AGENTGATE_AUDIT_MODE=async
+      - AGENTGATE_MCP_UPSTREAM=http://mcp-server:9000/mcp
+images:
+  - name: agentgate/gateway
+    newTag: "0.2.0"
+  - name: agentgate/judge
+    newTag: "0.2.0"

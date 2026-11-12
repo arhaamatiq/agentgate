@@ -1,0 +1,53 @@
+# AgentGate gateway policy.
+#
+# Each agent gets a scope: what it is allowed to do (operations) and to what
+# (resources). Anything outside the scope is blocked or, if ambiguous, sent to
+# the LLM judge. Agents connect over MCP at /mcp/<agent-name>.
+
+listen: ":8080"
+
+judge:
+  address: ${AGENTGATE_JUDGE_ADDRESS}   # empty: escalated calls are blocked
+  timeout: 15s
+
+state:
+  backend: memory          # memory (single replica) or redis (shared across replicas)
+  redis_url: ${AGENTGATE_REDIS_URL}
+  history_size: 10         # calls of trajectory the judge sees
+  judge_cache_ttl: 10m
+
+audit:
+  backend: none            # none | stdout | kafka
+  brokers: [kafka:9092]
+  topic: agentgate.decisions
+  partitions: 3
+  mode: async              # async: block only if Kafka backs up; sync: wait for ack
+  include_arguments: true
+
+# /v1/check callers (the Python SDK) may send their own scope.
+allow_inline_scope: true
+
+mcp:
+  upstreams:
+    default: ${AGENTGATE_MCP_UPSTREAM}
+  forward_headers: [Authorization]
+
+agents:
+  reporting-agent:
+    task: Produce the weekly sales report from the analytics database.
+    allowed_operations: [read]
+    allowed_resources: [sales, orders, products, /reports]
+    max_rate: 600          # calls per minute
+
+  support-agent:
+    task: Answer customer questions and email the customer back.
+    allowed_operations: [read, send]
+    allowed_resources: [tickets, knowledge_base, support@company.com]
+    deny_operations: [delete, execute]
+    max_rate: 120
+
+  devops-agent:
+    task: Diagnose and fix the api-service deployment.
+    allowed_operations: [read, execute, deploy]
+    allowed_resources: [api-service, /var/app/logs]
+    max_rate: 300

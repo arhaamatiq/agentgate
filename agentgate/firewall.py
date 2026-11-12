@@ -63,11 +63,16 @@ def protect_all(
     judge_base_url: str | None = None,
     rate_limit: int = 100,
     log_to_supabase: bool = True,
+    gateway_url: str | None = None,
 ) -> list[str]:
     """One-line setup: auto-detect installed frameworks and patch their tool dispatch.
 
     Args:
         config: Path to agentgate.yaml config file for scope profiles.
+        gateway_url: Send every check to a central AgentGate gateway instead of
+            evaluating in-process (falls back to AGENTGATE_GATEWAY_URL). The
+            gateway's policy, judge and audit log then apply; an unreachable
+            gateway blocks every call.
         judge_model: Model to use for Tier 2 LLM-as-judge evaluation.
         judge_api_key: API key for Tier 2 judge. Falls back to AGENTGATE_JUDGE_API_KEY / OPENAI_API_KEY.
         judge_base_url: Base URL for an OpenAI-compatible judge endpoint.
@@ -81,18 +86,22 @@ def protect_all(
 
     config_data = _load_config(config) if config else {}
 
-    openai_client = _create_tier2_client(judge_api_key, judge_base_url)
+    gateway_url = gateway_url or os.environ.get("AGENTGATE_GATEWAY_URL")
+    if gateway_url:
+        from agentgate.remote import RemotePolicyEngine
 
-    _engine = PolicyEngine(
-        openai_client=openai_client,
-        tier2_model=judge_model,
-        rate_limit=rate_limit,
-    )
+        _engine = RemotePolicyEngine(gateway_url)  # type: ignore[assignment]
+    else:
+        _engine = PolicyEngine(
+            openai_client=_create_tier2_client(judge_api_key, judge_base_url),
+            tier2_model=judge_model,
+            rate_limit=rate_limit,
+        )
 
     if config_data:
         _apply_config(_engine, config_data)
 
-    if log_to_supabase:
+    if log_to_supabase and not gateway_url:
         _init_audit_logger()
 
     _patched_frameworks = _auto_patch()
@@ -198,19 +207,20 @@ def guard(func: Any = None, *, tool_name: str = "") -> Any:
 
     def decorator(fn: Any) -> Any:
         name = tool_name or fn.__name__
+        bind = _argument_binder(fn)
 
         @functools.wraps(fn)
         def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
             engine = get_engine()
-            tc = ToolCall(tool_name=name, arguments=kwargs or {"args": list(args)})
-            verdict = engine.evaluate(tc)
+            tc = ToolCall(tool_name=name, arguments=bind(args, kwargs))
+            verdict = engine.evaluate_full(tc)
             _handle_verdict(verdict, tc)
             return fn(*args, **kwargs)
 
         @functools.wraps(fn)
         async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
             engine = get_engine()
-            tc = ToolCall(tool_name=name, arguments=kwargs or {"args": list(args)})
+            tc = ToolCall(tool_name=name, arguments=bind(args, kwargs))
             verdict = await engine.evaluate_async(tc)
             _handle_verdict(verdict, tc)
             return await fn(*args, **kwargs)
@@ -224,8 +234,59 @@ def guard(func: Any = None, *, tool_name: str = "") -> Any:
     return decorator
 
 
+def _argument_binder(fn: Any) -> Any:
+    """Map a call's positional and keyword arguments to parameter names.
+
+    Without this, ``execute_sql("DROP TABLE users")`` reached the engine as
+    ``{"args": [...]}``; the SQL analyzer then saw an empty query and allowed it.
+    """
+    import inspect
+
+    try:
+        sig = inspect.signature(fn)
+    except (TypeError, ValueError):
+        sig = None
+
+    def bind(args: tuple[Any, ...], kwargs: dict[str, Any]) -> dict[str, Any]:
+        if sig is None:
+            return _jsonable(kwargs or {"args": list(args)})
+        try:
+            bound = sig.bind_partial(*args, **kwargs)
+        except TypeError:
+            return _jsonable(kwargs or {"args": list(args)})
+        out: dict[str, Any] = {}
+        for pname, value in bound.arguments.items():
+            kind = sig.parameters[pname].kind
+            if pname in ("self", "cls"):
+                continue
+            if kind is inspect.Parameter.VAR_POSITIONAL:
+                out[pname] = list(value)
+            elif kind is inspect.Parameter.VAR_KEYWORD:
+                out.update(value)
+            else:
+                out[pname] = value
+        return _jsonable(out)
+
+    return bind
+
+
+def _jsonable(value: Any) -> Any:
+    """Coerce arbitrary argument values into JSON-serializable data."""
+    if isinstance(value, dict):
+        return {str(k): _jsonable(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple, set, frozenset)):
+        return [_jsonable(v) for v in value]
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return value
+    return str(value)
+
+
 def _handle_verdict(verdict: Verdict, tool_call: ToolCall) -> None:
-    """Process a verdict — log and raise if blocked."""
+    """Process a verdict — log and raise unless it is an explicit ALLOW.
+
+    ESCALATE is never permission. A caller that gets one back without running
+    Tier 2 is treated as blocked (fail-closed).
+    """
     from agentgate.logger import log_action_fire_and_forget
 
     ctx = get_context()
@@ -233,12 +294,16 @@ def _handle_verdict(verdict: Verdict, tool_call: ToolCall) -> None:
 
     log_action_fire_and_forget(tool_call, verdict, ctx)
 
-    if verdict.action == VerdictType.BLOCK:
+    if verdict.action != VerdictType.ALLOW:
         raise FirewallBlockedError(verdict, tool_call)
 
 
 def _create_engine(openai_api_key: str | None = None) -> PolicyEngine:
-    """Create a default PolicyEngine."""
+    """Create a default engine: the gateway if AGENTGATE_GATEWAY_URL is set."""
+    if url := os.environ.get("AGENTGATE_GATEWAY_URL"):
+        from agentgate.remote import RemotePolicyEngine
+
+        return RemotePolicyEngine(url)  # type: ignore[return-value]
     client = _create_tier2_client(openai_api_key)
     return PolicyEngine(openai_client=client)
 

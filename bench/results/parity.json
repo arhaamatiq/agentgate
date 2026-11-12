@@ -1,0 +1,8 @@
+{
+  "cases": 48716,
+  "by_kind": "map[engine:6330 fs:16912 http:3110 sql:11182 tables:11182]",
+  "exact": 48550,
+  "go_stricter": 162,
+  "same_verdict_different_reasoning": 4,
+  "go_looser_or_dataset_mismatch": 0
+}
