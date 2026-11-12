@@ -99,7 +99,7 @@ def _evaluate_tool_calls_sync(response: Any) -> None:
             tool_name=tc_data["name"],
             arguments=tc_data["arguments"],
         )
-        verdict = engine.evaluate(tc)
+        verdict = engine.evaluate_full(tc)
         _handle_verdict(verdict, tc)
 
 

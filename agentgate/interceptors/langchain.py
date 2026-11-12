@@ -46,7 +46,7 @@ def patch_langchain() -> bool:
         tc = ToolCall(tool_name=self.name, arguments=tool_input)
 
         engine = get_engine()
-        verdict = engine.evaluate(tc)
+        verdict = engine.evaluate_full(tc)
         _handle_verdict(verdict, tc)
 
         return _original_run(self, *args, **kwargs)

@@ -26,8 +26,35 @@ class TestGuardDecorator:
         def read_data(query: str = "") -> str:
             return f"result: {query}"
 
-        result = read_data(query="SELECT 1")
+        with scope(task="Read reporting data", allowed_operations=["read"]):
+            result = read_data(query="SELECT 1")
         assert result == "result: SELECT 1"
+
+    def test_guard_sync_never_treats_escalate_as_allow(self) -> None:
+        """Regression: sync callers used to run the tool on a Tier 1 ESCALATE."""
+        ran = []
+
+        @guard
+        def frobnicate(target: str = "") -> str:
+            ran.append(target)
+            return "done"
+
+        # No scope and no Tier 2 credentials: unknown tool escalates, and with
+        # no judge available the only acceptable outcome is BLOCK.
+        with pytest.raises(FirewallBlockedError):
+            frobnicate(target="prod")
+        assert ran == []
+
+    def test_guard_binds_positional_arguments(self) -> None:
+        """Regression: positional args reached the engine as {"args": [...]}
+        and the SQL analyzer saw an empty query."""
+
+        @guard
+        def execute_sql(query: str) -> str:
+            return "executed"
+
+        with pytest.raises(FirewallBlockedError):
+            execute_sql("DROP TABLE users")
 
     def test_guard_blocks_dangerous_sql(self) -> None:
         @guard(tool_name="execute_sql")

@@ -1,6 +1,8 @@
 """Tests for the Tier 1 static analyzers — SQL, filesystem, HTTP."""
 
 
+import pytest
+
 from agentgate.analyzers.sql import SQLAnalyzer
 from agentgate.analyzers.filesystem import FilesystemAnalyzer
 from agentgate.analyzers.http import HTTPAnalyzer
@@ -114,6 +116,48 @@ class TestFilesystemAnalyzer:
     def test_delete_operation_escalates(self) -> None:
         result = self.analyzer.analyze("safe_file.txt", operation="delete")
         assert result.verdict in (VerdictType.ESCALATE, VerdictType.BLOCK)
+
+
+class TestGrantedLocations:
+    """A block resting only on location heuristics escalates inside an explicit grant."""
+
+    def setup_method(self) -> None:
+        self.analyzer = FilesystemAnalyzer()
+
+    @pytest.mark.parametrize("path,op,granted", [
+        ("/var/log/old/2024-01-01.log", "delete", ["/var/log/old/"]),
+        ("/etc/app/config.yaml", "read", ["/etc/app/config.yaml"]),
+        ("/etc/app/old_configs/unused.conf", "delete", ["/etc/app/old_configs/"]),
+        ("/backups/db/backup_2022.sql", "delete", ["/backups/db/"]),
+        ("/var/log/nginx/access.log", "read", ["/var/log/nginx"]),
+        ("/dev/test_runs/out.txt", "delete", ["/tmp", "/dev/test_runs/"]),
+        ("/var/log/app/./x.log", "read", ["/var/log/app"]),
+    ])
+    def test_escalates(self, path: str, op: str, granted: list[str]) -> None:
+        assert self.analyzer.analyze(path, op).verdict == VerdictType.BLOCK
+        result = self.analyzer.analyze(path, op, granted)
+        assert result.verdict == VerdictType.ESCALATE
+        assert "inside granted resource" in result.reasoning
+
+    @pytest.mark.parametrize("path,op,granted", [
+        ("/etc/app/secrets.yaml", "read", ["/etc/app/"]),           # credential file
+        ("/etc/app/.env", "read", ["/etc/app/"]),
+        ("/etc/app/server.key", "read", ["/etc/app/"]),
+        ("/etc/app/nginx.conf", "write", ["/etc/app/"]),            # service config
+        ("/var/log/app/../../../etc/shadow", "read", ["/var/log/app/"]),
+        ("/var/log/app/x%2elog", "read", ["/var/log/app/"]),         # encoded
+        ("/etc/nginx/site.conf", "read", ["/etc/"]),                # grant is the system dir
+        ("/var/log/syslog", "read", ["/var"]),                      # grant is above it
+        ("/var/log/app.log", "read", ["/"]),
+        ("/var/log/apps/x.log", "read", ["/var/log/app"]),          # sibling, not inside
+        ("/var/log", "read", ["/var/log/app/"]),                    # parent, not inside
+        ("/var/log/App/x.log", "read", ["/var/log/app/"]),          # case differs
+        ("/var/log/app/x.log", "read", ["var/log/app"]),            # relative grant
+        ("/var/log/app/old", "delete", ["/var/log/app/"]),          # directory delete
+        ("/var/log/app/*.log", "delete", ["/var/log/app/"]),        # wildcard delete
+    ])
+    def test_still_blocks(self, path: str, op: str, granted: list[str]) -> None:
+        assert self.analyzer.analyze(path, op, granted).verdict == VerdictType.BLOCK
 
 
 class TestHTTPAnalyzer:

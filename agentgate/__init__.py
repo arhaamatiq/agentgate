@@ -19,7 +19,7 @@ from agentgate.context import AgentContext, agent_context
 from agentgate.engine import PolicyEngine
 from agentgate.models import Verdict, VerdictType
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 __all__ = [
     "protect_all",
     "scope",

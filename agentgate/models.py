@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import enum
+import re
 import uuid
 from datetime import datetime, timezone
 from typing import Any
@@ -48,6 +49,58 @@ class ToolCall(BaseModel):
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
+# Broad operations subsume narrower ones. If "write" is declared as allowed,
+# then "config", "send", "export" etc. are implicitly permitted.
+#
+# This lives at module level on purpose: as an underscore attribute on the
+# pydantic model it became a ModelPrivateAttr, and class-level access
+# (ScopePolicy._OPERATION_SUBSUMPTION.get) raised AttributeError inside the
+# Tier 2 prompt builder for every subsumed operation.
+OPERATION_SUBSUMPTION: dict[str, frozenset[str]] = {
+    "write": frozenset({"config", "send", "export", "update", "notify", "forward", "broadcast", "post"}),
+    "execute": frozenset({"deploy", "restart", "run", "start", "stop", "bounce"}),
+    "destructive": frozenset({"delete", "purge", "drop", "truncate", "remove", "flush", "wipe"}),
+    "read": frozenset({"list", "get", "describe", "fetch", "check", "show", "monitor", "tail", "inspect"}),
+    "send": frozenset({"notify", "forward", "broadcast", "post"}),
+    "deploy": frozenset({"restart", "bounce", "rollout", "release"}),
+}
+
+# A scope often names an operation by the tool's own verb, which is narrower
+# than the class the engine infers: ['delete'] for delete_file (class
+# 'write'), ['list'] for list_directory ('read'), ['restart'] for
+# restart_service ('deploy'). A declared verb authorizes a call only when the
+# tool's name starts with that verb AND the engine's class for the call is one
+# the verb belongs to. So ['delete'] permits delete_file, but not write_file,
+# not execute_sql("DROP TABLE ..."), and not a delete_* tool whose arguments
+# carry a DROP (class 'destructive'). Verbs for writing and for running
+# commands are left out on purpose: those classes are too broad for a tool
+# name to vouch for what the call does. Config verbs vouch only for 'config',
+# which always goes on to the infrastructure red-flag check and the judge.
+_VERB_READ = frozenset({"read"})
+_VERB_DELETE = frozenset({"write", "delete"})  # file deletes are class 'write'
+_VERB_SEND = frozenset({"send"})
+_VERB_DEPLOY = frozenset({"deploy"})
+_VERB_EXPORT = frozenset({"export", "read"})  # an export reads what it sends out
+_VERB_CONFIG = frozenset({"config"})
+VERB_OPERATIONS: dict[str, frozenset[str]] = {
+    **dict.fromkeys(("list", "get", "describe", "fetch", "show", "check", "inspect",
+                     "monitor", "tail", "search", "find", "view"), _VERB_READ),
+    **dict.fromkeys(("delete", "remove", "purge", "clear"), _VERB_DELETE),
+    **dict.fromkeys(("forward", "notify", "post", "reply", "broadcast"), _VERB_SEND),
+    **dict.fromkeys(("restart", "start", "stop", "rollout", "release"), _VERB_DEPLOY),
+    **dict.fromkeys(("export", "upload"), _VERB_EXPORT),
+    **dict.fromkeys(("update", "set", "configure"), _VERB_CONFIG),
+}
+
+_TOOL_VERB_RE = re.compile(r"[A-Za-z][a-z]*")
+
+
+def tool_verb(tool_name: str) -> str:
+    """The leading verb of a tool name: delete_file, deleteFile, delete-file -> "delete"."""
+    m = _TOOL_VERB_RE.match(tool_name)
+    return m.group(0).lower() if m else ""
+
+
 class ScopePolicy(BaseModel):
     """Defines what an agent is allowed to do within a given scope."""
 
@@ -57,18 +110,7 @@ class ScopePolicy(BaseModel):
     max_rate: int | None = None
     deny_operations: list[str] = Field(default_factory=list)
 
-    # Broad operations subsume narrower ones. If "write" is declared as allowed,
-    # then "config", "send", "export" etc. are implicitly permitted.
-    _OPERATION_SUBSUMPTION: dict[str, frozenset[str]] = {
-        "write": frozenset({"config", "send", "export", "update", "notify", "forward", "broadcast", "post"}),
-        "execute": frozenset({"deploy", "restart", "run", "start", "stop", "bounce"}),
-        "destructive": frozenset({"delete", "purge", "drop", "truncate", "remove", "flush", "wipe"}),
-        "read": frozenset({"list", "get", "describe", "fetch", "check", "show", "monitor", "tail", "inspect"}),
-        "send": frozenset({"notify", "forward", "broadcast", "post"}),
-        "deploy": frozenset({"restart", "bounce", "rollout", "release"}),
-    }
-
-    def is_operation_allowed(self, operation: str) -> bool | None:
+    def is_operation_allowed(self, operation: str, tool_name: str = "") -> bool | None:
         """Check if an operation is allowed by this policy.
 
         Returns True if explicitly allowed, False if explicitly denied,
@@ -78,8 +120,17 @@ class ScopePolicy(BaseModel):
           1. Direct string equality.
           2. Underscore-prefix matching: "config" matches "config_tune".
           3. Subsumption: if "write" is allowed, then "config"/"send"/"export" pass.
+          4. Tool verb: "delete" is allowed and the tool is delete_file, whose
+             class ("write") is one "delete" belongs to (VERB_OPERATIONS).
+          5. Tool name: the scope names the tool itself ("restart_service"),
+             for any class but "destructive", which must be declared.
+
+        A denied operation, a denied verb that starts the tool's name, or the
+        denied tool name itself always returns False.
         """
-        if operation in self.deny_operations:
+        verb = tool_verb(tool_name)
+        if (operation in self.deny_operations or (verb and verb in self.deny_operations)
+                or (tool_name and tool_name in self.deny_operations)):
             return False
         if not self.allowed_operations:
             return None
@@ -90,9 +141,13 @@ class ScopePolicy(BaseModel):
                 return True
             if operation.startswith(allowed_op + "_"):
                 return True
-            subsumes = self._OPERATION_SUBSUMPTION.get(allowed_op, frozenset())
+            subsumes = OPERATION_SUBSUMPTION.get(allowed_op, frozenset())
             if operation in subsumes:
                 return True
+        if verb in self.allowed_operations and operation in VERB_OPERATIONS.get(verb, frozenset()):
+            return True
+        if tool_name and tool_name in self.allowed_operations and operation != "destructive":
+            return True
         return False
 
     def is_resource_allowed(self, resource: str) -> bool | None:
@@ -100,12 +155,24 @@ class ScopePolicy(BaseModel):
 
         Returns None if no resource restrictions are declared.
 
-        Matching layers:
+        An absolute path grant (``/srv/finance/reports``) matches that path,
+        anything under it, and a bare name for its last segments
+        (``reports``, ``finance/reports``). Never a parent (``/srv``), a
+        sibling sharing a prefix (``/srv/finance/reports_old``) or another
+        absolute path with the same tail.
+
+        A URL grant matches a URL resource only if it is that URL or continues
+        it at ``/``, ``?`` or ``#``: same host and port, under its path. Never
+        ``https://api.example.com.evil.net`` for ``https://api.example.com``.
+
+        Any other grant (table, service, bare directory, URL) matches by:
           1. Exact match after normalizing leading/trailing slashes.
-          2. Forward prefix — resource is under the allowed path.
-          3. Reverse prefix at a word boundary (``-``, ``_``, ``/``, ``.``).
+          2. Forward prefix — resource is under or extends the allowed name.
+          3. Reverse prefix at a word boundary (``-``, ``_``, ``.``). A parent
+             (``/`` boundary) never matches.
           4. Path-suffix — bare name matches the last segments of the allowed
-             path (e.g. ``"uploads"`` matches ``"/app/uploads/"``).
+             path (e.g. ``"uploads"`` matches ``"app/uploads"``), or the
+             allowed name matches the last segments of the resource.
         """
         if not self.allowed_resources:
             return None
@@ -113,6 +180,7 @@ class ScopePolicy(BaseModel):
         if not resource_norm:
             return None
         resource_parts = resource_norm.split("/")
+        resource_abs = resource.strip().startswith("/")
 
         for allowed in self.allowed_resources:
             allowed_norm = allowed.lower().strip("/").strip()
@@ -120,14 +188,25 @@ class ScopePolicy(BaseModel):
                 continue
             allowed_parts = allowed_norm.split("/")
 
-            if resource_norm == allowed_norm:
+            if resource_norm == allowed_norm or resource_norm.startswith(allowed_norm + "/"):
                 return True
 
-            if resource_norm.startswith(allowed_norm + "/") or resource_norm.startswith(allowed_norm):
+            if "://" in allowed_norm and "://" in resource_norm:
+                if resource_norm.startswith((allowed_norm + "?", allowed_norm + "#")):
+                    return True
+                continue
+
+            if allowed.strip().startswith("/"):
+                if not resource_abs and len(resource_parts) < len(allowed_parts):
+                    if resource_parts == allowed_parts[-len(resource_parts):]:
+                        return True
+                continue
+
+            if resource_norm.startswith(allowed_norm):
                 return True
 
             if allowed_norm.startswith(resource_norm) and len(resource_norm) < len(allowed_norm):
-                if allowed_norm[len(resource_norm)] in "-_./":
+                if allowed_norm[len(resource_norm)] in "-_.":
                     return True
 
             if len(resource_parts) < len(allowed_parts):
