@@ -192,6 +192,11 @@ flowchart LR
 <!-- results:start -->
 | | Result |
 |---|---|
+| Decision latency inside the gateway (rules, Redis state, Kafka audit produce) | p99 0.58 ms at 1,000 req/s, 1.90 ms at 5,000 req/s; 7.93 ms end to end at 1,000 req/s |
+| Throughput, one gateway replica | 17,258 req/s |
+| Decisions streamed gateway → Kafka → Postgres | 25,000, 0 lost, 0 duplicated, auditor killed and broker restarted mid-run |
+| Tampering by a DB superuser (edit, delete, truncate, rewrite, forge) | 6/6 detected by the verifier |
+| Component failures (judge, Redis, Kafka, gateway, rule faults) | 8/8 fail closed |
 | Adversarial dev benchmark, 466 decisions (development set) | recall 99.7%, precision 97.2% via the gateway; 99.6% / 98.1% in run 007, up from 67.3% recall in run 001 |
 | Go rule engine vs Python reference | 48,550 of 48,716 fuzzed and benchmark inputs identical, 0 more permissive |
 | Calls settled by rules alone (no LLM) | 280 of 466 (60%) on the dev set |

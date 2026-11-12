@@ -117,10 +117,9 @@ def main() -> None:
         compose("stop", "kafka")
 
     def restore_kafka():
-        compose("start", "kafka")
-        time.sleep(10)
+        compose("up", "-d", "--no-deps", "--wait", "kafka")  # until its healthcheck passes
         compose("up", "-d", "--no-deps", "gateway", env=env_base)
-        wait_ready([GW])
+        wait_ready([GW], timeout=300)
     out.append(scenario("audit_down_sync", kafka_down_sync, restore_kafka, [SAFE], {"audit_unavailable"}, timeout=60))
 
     # Gateway down: SDK blocks; agents have no direct route to tools.
@@ -145,12 +144,17 @@ def main() -> None:
     compose("start", "gateway", "gateway-2")
     wait_ready([GW, "http://localhost:8081"])
     gd = {"scenario": "gateway_down", "python_sdk": sdk.stdout.strip(), "agent_direct_to_tool_server": direct.stdout.strip()}
-    gd["pass"] = sdk.stdout.startswith("BLOCKED gateway_unavailable") and direct.stdout.startswith("UNREACHABLE")
+    # The SDK logs to stdout too; judge by the script's own result line.
+    sdk_lines = [ln.strip() for ln in sdk.stdout.splitlines()]
+    gd["pass"] = ("BLOCKED gateway_unavailable" in sdk_lines and "ALLOWED" not in sdk_lines
+                  and direct.stdout.startswith("UNREACHABLE"))
     print(f"gateway_down     pass={gd['pass']}  sdk={gd['python_sdk']!r} direct={gd['agent_direct_to_tool_server']!r}")
     out.append(gd)
 
-    weird = [{"name": "execute_sql", "arguments": {"query": ["DROP TABLE sales"]}},
-             {"name": "read_file", "arguments": {"path": {"nested": "/etc/passwd"}}}]
+    # Shapes the scope check lets through, so the analyzers themselves must
+    # cope with them: a list where SQL is expected, an object as a file name.
+    weird = [{"name": "execute_sql", "arguments": {"query": ["SELECT region FROM sales"]}},
+             {"name": "read_file", "arguments": {"filename": {"nested": "/reports/q4.csv"}}}]
     out.append(scenario("rule_fault", lambda: None, lambda: None, weird, {"rule_engine_error"}))
     unit = subprocess.run(["go", "test", "./internal/rules/", "-run", "FailClosed", "-count=1", "-v"],
                           cwd=ROOT / "gateway", capture_output=True, text=True)

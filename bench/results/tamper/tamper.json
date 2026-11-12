@@ -1,0 +1,95 @@
+{
+  "live_log": {
+    "ok": true,
+    "rows_verified": 25469,
+    "checkpoints_verified": 150,
+    "rows_cross_checked_with_kafka": 25469
+  },
+  "append_only": {
+    "writer_update": "rejected",
+    "owner_update": "rejected",
+    "owner_delete": "rejected",
+    "owner_truncate": "rejected"
+  },
+  "control": {
+    "attack": "none",
+    "chain": 0,
+    "seq": null,
+    "detected": false,
+    "problem_kinds": [],
+    "problems": 0,
+    "rows_verified": 25469
+  },
+  "attacks": [
+    {
+      "attack": "edit_event",
+      "chain": 0,
+      "seq": 4320,
+      "detected": true,
+      "problem_kinds": [
+        "hash_mismatch",
+        "kafka_source_mismatch"
+      ],
+      "problems": 2,
+      "rows_verified": 25469
+    },
+    {
+      "attack": "edit_column",
+      "chain": 0,
+      "seq": 4320,
+      "detected": true,
+      "problem_kinds": [
+        "column_mismatch"
+      ],
+      "problems": 1,
+      "rows_verified": 25469
+    },
+    {
+      "attack": "delete_middle",
+      "chain": 0,
+      "seq": 4324,
+      "detected": true,
+      "problem_kinds": [
+        "broken_link",
+        "missing_rows"
+      ],
+      "problems": 2,
+      "rows_verified": 25468
+    },
+    {
+      "attack": "truncate_tail",
+      "chain": 0,
+      "seq": 8549,
+      "detected": true,
+      "problem_kinds": [
+        "checkpoint_row_missing"
+      ],
+      "problems": 1,
+      "rows_verified": 25369
+    },
+    {
+      "attack": "rewrite_chain",
+      "chain": 0,
+      "seq": 4320,
+      "detected": true,
+      "problem_kinds": [
+        "checkpoint_mismatch",
+        "kafka_source_mismatch"
+      ],
+      "problems": 27,
+      "rows_verified": 25469
+    },
+    {
+      "attack": "forge_append",
+      "chain": 0,
+      "seq": 8649,
+      "detected": true,
+      "problem_kinds": [
+        "no_kafka_source"
+      ],
+      "problems": 1,
+      "rows_verified": 25470
+    }
+  ],
+  "all_detected": true
+}

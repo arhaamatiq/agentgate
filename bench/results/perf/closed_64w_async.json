@@ -1,0 +1,33 @@
+{
+  "mode": "closed",
+  "concurrency": 64,
+  "duration_s": 30.096737973,
+  "requests": 519398,
+  "errors": 0,
+  "achieved_rps": 17257.61776794401,
+  "latency_ms": {
+    "max": 106.445,
+    "p50": 2.691,
+    "p90": 7.397,
+    "p99": 18.005,
+    "p99.9": 37.189
+  },
+  "server_decision_ms": {
+    "max": 49.918,
+    "p50": 0.009,
+    "p90": 0.193,
+    "p99": 2.589,
+    "p99.9": 9.099
+  },
+  "verdicts": {
+    "allow": 213323,
+    "block": 306075
+  },
+  "payload_pool": 280,
+  "url": "http://gateway:8080/v1/check",
+  "client_cpus": 8,
+  "started_at": "2026-11-12T22:00:00Z",
+  "go_version": "go1.27.3",
+  "probe_excluded_tier2": 186,
+  "warmup_s": 5
+}
