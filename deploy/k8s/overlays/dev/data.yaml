@@ -1,0 +1,143 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: kafka
+spec:
+  serviceName: kafka
+  replicas: 1
+  selector:
+    matchLabels: { app.kubernetes.io/name: kafka }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: kafka }
+    spec:
+      containers:
+        - name: kafka
+          image: apache/kafka:4.1.0
+          env:
+            - { name: KAFKA_NODE_ID, value: "1" }
+            - { name: KAFKA_PROCESS_ROLES, value: "broker,controller" }
+            - { name: KAFKA_LISTENERS, value: "PLAINTEXT://:9092,CONTROLLER://:9093" }
+            - { name: KAFKA_ADVERTISED_LISTENERS, value: "PLAINTEXT://kafka:9092" }
+            - { name: KAFKA_CONTROLLER_LISTENER_NAMES, value: CONTROLLER }
+            - { name: KAFKA_LISTENER_SECURITY_PROTOCOL_MAP, value: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT" }
+            - { name: KAFKA_CONTROLLER_QUORUM_VOTERS, value: "1@localhost:9093" }
+            - { name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR, value: "1" }
+            - { name: KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR, value: "1" }
+            - { name: KAFKA_TRANSACTION_STATE_LOG_MIN_ISR, value: "1" }
+            - { name: KAFKA_AUTO_CREATE_TOPICS_ENABLE, value: "false" }
+          ports: [{ name: kafka, containerPort: 9092 }]
+          volumeMounts: [{ name: data, mountPath: /var/lib/kafka/data }]
+  volumeClaimTemplates:
+    - metadata: { name: data }
+      spec:
+        accessModes: [ReadWriteOnce]
+        resources: { requests: { storage: 5Gi } }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka
+spec:
+  selector: { app.kubernetes.io/name: kafka }
+  ports: [{ name: kafka, port: 9092 }]
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+spec:
+  serviceName: postgres
+  replicas: 1
+  selector:
+    matchLabels: { app.kubernetes.io/name: postgres }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: postgres }
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:17-alpine
+          env:
+            - { name: POSTGRES_USER, value: agentgate_admin }
+            - { name: POSTGRES_PASSWORD, value: admin-dev-only }
+            - { name: POSTGRES_DB, value: agentgate }
+            - { name: PGDATA, value: /var/lib/postgresql/data/pgdata }
+          ports: [{ name: postgres, containerPort: 5432 }]
+          readinessProbe:
+            exec: { command: ["pg_isready", "-U", "agentgate_admin", "-d", "agentgate"] }
+          volumeMounts: [{ name: data, mountPath: /var/lib/postgresql/data }]
+  volumeClaimTemplates:
+    - metadata: { name: data }
+      spec:
+        accessModes: [ReadWriteOnce]
+        resources: { requests: { storage: 5Gi } }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+spec:
+  selector: { app.kubernetes.io/name: postgres }
+  ports: [{ name: postgres, port: 5432 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app.kubernetes.io/name: redis }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: redis }
+    spec:
+      containers:
+        - name: redis
+          image: redis:7.4-alpine
+          args: ["--save", "", "--appendonly", "no", "--maxmemory", "256mb", "--maxmemory-policy", "volatile-lru"]
+          ports: [{ name: redis, containerPort: 6379 }]
+          readinessProbe:
+            exec: { command: ["redis-cli", "ping"] }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+spec:
+  selector: { app.kubernetes.io/name: redis }
+  ports: [{ name: redis, port: 6379 }]
+---
+# Data-plane access: Redis from gateways; Kafka from gateways and auditors;
+# Postgres from auditors and the migration job.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: redis-from-gateway
+spec:
+  podSelector: { matchLabels: { app.kubernetes.io/name: redis } }
+  ingress:
+    - from: [{ podSelector: { matchLabels: { app.kubernetes.io/name: agentgate-gateway } } }]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: kafka-from-gateway-and-auditor
+spec:
+  podSelector: { matchLabels: { app.kubernetes.io/name: kafka } }
+  ingress:
+    - from:
+        - podSelector: { matchLabels: { app.kubernetes.io/name: agentgate-gateway } }
+        - podSelector: { matchLabels: { app.kubernetes.io/name: agentgate-auditor } }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: postgres-from-auditor
+spec:
+  podSelector: { matchLabels: { app.kubernetes.io/name: postgres } }
+  ingress:
+    - from:
+        - podSelector: { matchLabels: { app.kubernetes.io/name: agentgate-auditor } }
+        - podSelector: { matchLabels: { app.kubernetes.io/name: agentgate-audit-migrate } }

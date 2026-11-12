@@ -1,0 +1,38 @@
+name: ci
+on: [push, pull_request]
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -e ".[dev,judge,gateway]"
+      - run: pytest tests/ -q
+  go:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: { go-version: "1.26", cache-dependency-path: gateway/go.sum }
+      - run: test -z "$(gofmt -l .)"
+        working-directory: gateway
+      - run: go vet ./... && go test ./...
+        working-directory: gateway
+  parity:
+    # Rebuild the corpus from the Python engine and diff it with Go.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - uses: actions/setup-go@v5
+        with: { go-version: "1.26", cache-dependency-path: gateway/go.sum }
+      - run: pip install -e . sqlparse==0.5.5  # the Go keyword table is generated from 0.5.5
+      - run: PYTHON=python ./bench/parity/run_parity.sh
+  images:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t agentgate/gateway:ci gateway && docker build -f Dockerfile.judge -t agentgate/judge:ci .
+      - run: kubectl kustomize deploy/k8s/overlays/dev > /dev/null

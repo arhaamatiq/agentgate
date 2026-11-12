@@ -1,0 +1,73 @@
+# One writer per partition is enough for tens of thousands of decisions/s;
+# the auditor joins a consumer group, so extra replicas take over partitions
+# on failure. The chain head is always re-read from Postgres under an
+# advisory lock, so a zombie replica cannot fork a chain.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: agentgate-audit-migrate
+spec:
+  backoffLimit: 10
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: agentgate-audit-migrate }
+    spec:
+      restartPolicy: OnFailure
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: migrate
+          image: agentgate/gateway
+          command: ["/usr/local/bin/agentgate-auditor", "migrate"]
+          env:
+            - name: AGENTGATE_PG_DSN
+              valueFrom: { secretKeyRef: { name: agentgate-audit, key: admin-dsn } }
+            - name: AGENTGATE_PG_WRITER_PASSWORD
+              valueFrom: { secretKeyRef: { name: agentgate-audit, key: writer-password } }
+            - name: AGENTGATE_PG_READER_PASSWORD
+              valueFrom: { secretKeyRef: { name: agentgate-audit, key: reader-password } }
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: [ALL] }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agentgate-auditor
+  labels: { app.kubernetes.io/name: agentgate-auditor }
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app.kubernetes.io/name: agentgate-auditor }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: agentgate-auditor }
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9102"
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: auditor
+          image: agentgate/gateway
+          command: ["/usr/local/bin/agentgate-auditor", "run"]
+          env:
+            - name: AGENTGATE_KAFKA_BROKERS
+              valueFrom: { configMapKeyRef: { name: agentgate-env, key: AGENTGATE_KAFKA_BROKERS } }
+            - name: AGENTGATE_PG_DSN
+              valueFrom: { secretKeyRef: { name: agentgate-audit, key: writer-dsn } }
+            - name: AGENTGATE_AUDIT_SIGNING_KEY
+              valueFrom: { secretKeyRef: { name: agentgate-audit, key: signing-key } }
+          ports: [{ name: metrics, containerPort: 9102 }]
+          livenessProbe:
+            httpGet: { path: /healthz, port: metrics }
+          resources:
+            requests: { cpu: 100m, memory: 64Mi }
+            limits: { memory: 256Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }

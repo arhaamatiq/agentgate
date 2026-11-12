@@ -41,3 +41,7 @@ agentgate.yaml
 
 # OS / editor
 .DS_Store
+
+# Go build output
+/gateway/bin/
+/bin/

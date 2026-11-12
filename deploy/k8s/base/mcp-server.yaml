@@ -1,0 +1,35 @@
+# Demo MCP server. Replace with your real MCP servers; the NetworkPolicy
+# makes them reachable only from the gateway.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mcp-server
+  labels: { app.kubernetes.io/name: mcp-server, agentgate.dev/upstream: "true" }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app.kubernetes.io/name: mcp-server }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: mcp-server, agentgate.dev/upstream: "true" }
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: mcp
+          image: agentgate/gateway
+          command: ["/usr/local/bin/demo-mcp-server", "http", "--addr", ":9000"]
+          ports: [{ name: mcp, containerPort: 9000 }]
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mcp-server
+spec:
+  selector: { app.kubernetes.io/name: mcp-server }
+  ports: [{ name: mcp, port: 9000, targetPort: mcp }]

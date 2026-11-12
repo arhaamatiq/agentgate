@@ -1,0 +1,29 @@
+# Self-contained dev install: single-node Kafka, PostgreSQL and Redis in the
+# namespace, with DEV ONLY secrets. Production: point agentgate-env at managed
+# services and supply real secrets.
+#
+#   kubectl apply -k deploy/k8s/overlays/dev
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: agentgate
+resources:
+  - ../../base
+  - data.yaml
+secretGenerator:
+  - name: agentgate-audit
+    literals:
+      - admin-dsn=postgres://agentgate_admin:admin-dev-only@postgres:5432/agentgate?sslmode=disable
+      - writer-dsn=postgres://agentgate_writer:writer-dev-only@postgres:5432/agentgate?sslmode=disable
+      - writer-password=writer-dev-only
+      - reader-password=reader-dev-only
+      - signing-key=Vn7srjfoQoz0eUyXR/MBVIuM1JvUXVUq0oUBXdju7B0=
+  - name: agentgate-judge
+    literals:
+      - api-key=
+patches:
+  # The off-the-shelf Kafka/Postgres/Redis images run as root.
+  - target: { kind: Namespace, name: agentgate }
+    patch: |-
+      - op: replace
+        path: /metadata/labels/pod-security.kubernetes.io~1enforce
+        value: baseline
