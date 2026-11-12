@@ -1,263 +1,230 @@
-# AgentGate 
- 
-### Action-level firewall for AI agents
- 
-> Existing guardrails protect what agents **say**.  
-> AgentGate protects what agents **do**.
- 
+# AgentGate
+
+### A fail-closed firewall for what AI agents *do*
+
+> Guardrails check what an agent **says**. AgentGate checks every tool call an
+> agent **makes**, before it runs: SQL, files, HTTP, shell, email, MCP tools.
+
 ![AgentGate Demo](docs/demo.png)
- 
+
 [![PyPI](https://img.shields.io/pypi/v/agentgate-py?color=red&label=agentgate-py)](https://pypi.org/project/agentgate-py/)
 [![Python](https://img.shields.io/badge/python-3.11+-blue)](https://pypi.org/project/agentgate-py/)
+[![Go](https://img.shields.io/badge/go-1.26+-00ADD8)](gateway/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-72%20passing-brightgreen)]()
- 
----
- 
-## The problem
- 
-When an AI agent calls `DELETE FROM users` or reads `/etc/passwd`, your LLM's
-output looks completely clean. It says "processing your request" while the damage
-is already done.
- 
-Text-level guardrails — Guardrails AI, NeMo, Constitutional AI — evaluate what
-the model *outputs*. None of them see the tool call arguments. None of them know
-what the agent is actually executing.
- 
-AgentGate intercepts at the Python execution layer, one step before any side
-effect occurs. The tool function never runs. The database row stays intact.
- 
----
- 
-## The core insight
- 
-Most security tools enumerate what's dangerous. That approach fails against
-novel attacks — if you haven't seen it before, you don't block it.
- 
-AgentGate inverts this. You declare what the agent is *allowed* to do.
-Everything else is blocked by definition, including attacks that have never
-been seen before.
- 
-```python
-with agentgate.scope(
-    task="Generate Q4 sales report",
-    allowed_operations=["read", "aggregate"],
-    allowed_resources=["sales_data", "reports"],
-):
-    run_agent(task)
+
+An agent told to "generate the Q4 report" that reads a poisoned document can
+call `execute_sql("DELETE FROM users")` while its chat output says "processing
+your request". AgentGate sits on the execution path, so the call is decided
+before the tool runs, and a blocked call never reaches the database.
+
+You declare what an agent is **allowed** to do; anything else is blocked or, if
+genuinely ambiguous, judged by a separate LLM. Every failure mode blocks.
+
+```yaml
+agents:
+  reporting-agent:
+    task: Produce the weekly sales report from the analytics database.
+    allowed_operations: [read]
+    allowed_resources: [sales, orders, products, /reports]
 ```
- 
-An agent operating under this scope cannot touch `users`, cannot write to
-`/etc`, cannot make HTTP requests — regardless of what the LLM decides to do.
- 
+
+An operation is a class the engine infers (`read`, `write`, `send`, `export`,
+`deploy`, `config`, `execute`, `destructive`, `http`), a tool's own verb, or the
+tool's full name. `[delete]` permits `delete_file` but never `write_file` or a
+SQL `DROP`; `[restart_service]` permits that tool; `destructive` always has to
+be declared. A file tool is a `read` only if its name says so (`read_file`,
+`list_directory`, `search_files`); `edit_file` or `move_file` is a `write`, and
+`send_file` a `send`. A call that only reads, such as a GET to a URL listed in
+`allowed_resources` or a bare `df -h`, passes a `read` scope.
+
+An absolute path in `allowed_resources` covers that path and what is under it,
+never its parent or a sibling: `/srv/finance/reports` does not allow `/srv`.
+A URL covers itself and what is under its path, never another host:
+`https://api.example.com` does not allow `https://api.example.com.evil.net`.
+A path inside an allowed resource such as `/var/log/app/` still gets checked
+for credential files, traversal and encoding tricks; only location guesses
+(system directories, `*.conf`, `backups/`) defer to the grant, and those calls
+go to the LLM judge instead of being blocked outright.
+
 ---
- 
-## Quick start
- 
+
+## Two ways to run it
+
+| | **Python library** | **Gateway** |
+|---|---|---|
+| What | In-process interceptors for OpenAI, LangChain and plain functions | Go MCP gateway + Python LLM judge + audit pipeline |
+| Install | `pip install agentgate-py` | `docker compose up -d` or `kubectl apply -k deploy/k8s/overlays/dev` |
+| Best for | One Python agent, zero infrastructure | Many agents, any language, MCP clients (desktop apps, IDEs, ...), central policy and audit |
+| Decisions | Same rules, same judge prompt | Same rules (verified against the Python engine), judge over gRPC |
+| Audit | Optional Supabase logging | Kafka → hash-chained, append-only Postgres log with a verifier |
+
+The Python library can also use the gateway as its engine:
+`agentgate.protect_all(gateway_url="http://agentgate:8080")`.
+
+---
+
+## Quick start: Python library
+
 ```bash
 pip install agentgate-py
 ```
- 
+
 ```python
 import agentgate
- 
-# One line — auto-patches LangChain and OpenAI SDK
-agentgate.protect_all()
- 
-# Declare scope around agent execution
+
+agentgate.protect_all()          # patches the OpenAI SDK and LangChain if installed
+
 with agentgate.scope(
     task="Generate Q4 sales report",
-    allowed_operations=["read", "aggregate"],
-    allowed_resources=["sales_data", "reports"],
+    allowed_operations=["read"],
+    allowed_resources=["sales", "reports"],
 ):
-    run_agent(task)
+    run_agent()                  # out-of-scope tool calls raise FirewallBlockedError
 ```
- 
-Or protect individual functions directly:
- 
+
+Or guard functions directly:
+
 ```python
 @agentgate.guard
-def execute_sql(query: str) -> str:
-    ...
- 
-@agentgate.guard
-def read_file(path: str) -> str:
-    ...
+def execute_sql(query: str) -> str: ...
 ```
- 
-Every call to these functions is evaluated before the body runs. If it's out
-of scope, `FirewallBlockedError` is raised and the function never executes.
- 
+
+Ambiguous calls go to the LLM judge (`OPENAI_API_KEY`, or any OpenAI-compatible
+endpoint via `AGENTGATE_JUDGE_BASE_URL`). Without a judge, they are blocked.
+
+Try it without any key: `python examples/demo_agent/run_demo.py`.
+
+## Quick start: gateway
+
+```bash
+git clone https://github.com/arhaamatiq/agentgate && cd agentgate
+export OPENAI_API_KEY=sk-...        # optional: without it, ambiguous calls are blocked
+docker compose up -d --build
+```
+
+This starts two gateway replicas (`:8080`, `:8081`), the LLM judge, Redis,
+Kafka, PostgreSQL, the audit writer, and a demo MCP server reachable only
+through the gateway. Policy lives in [`deploy/policy.yaml`](deploy/policy.yaml).
+
+```bash
+# Decide one call
+curl -s localhost:8080/v1/check -d '{"agent_id":"reporting-agent","tool_name":"execute_sql",
+  "arguments":{"query":"DROP TABLE sales"}}'
+# {"verdict":"block","tier":1,"policy":"scope_operation","reasoning":"Operation 'destructive' not in allowed operations: ['read']", ...}
+
+# Or speak MCP: point any MCP client at http://localhost:8080/mcp/reporting-agent
+```
+
+**Local MCP servers (desktop and IDE MCP clients).** Install the binary
+(`go install github.com/arhaamatiq/agentgate/gateway/cmd/agentgate-gateway@latest`)
+and wrap any stdio MCP server; the gateway runs as a filter in front of it:
+
+```json
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "agentgate-gateway",
+      "args": ["stdio", "--config", "policy.yaml", "--agent", "devops-agent", "--",
+               "npx", "-y", "@modelcontextprotocol/server-filesystem", "/var/app"]
+    }
+  }
+}
+```
+
+A blocked call comes back to the model as a tool error that says why, so the
+model can correct course instead of retrying blindly.
+
+**Verify the audit log** (recomputes every hash, checks signed checkpoints, and
+matches every row to its Kafka source):
+
+```bash
+docker compose run --rm --entrypoint agentgate-auditor auditor verify \
+  --dsn postgres://agentgate_reader:reader-dev-only@postgres:5432/agentgate \
+  --brokers kafka:9092 --public-key GbWTR3bGXr1hHEc6wZ6c8UrdM7ZCevxcppq4fctVbEc= --kafka-crosscheck
+```
+
 ---
- 
+
 ## How it works
- 
+
+```mermaid
+flowchart LR
+    A[Agent / MCP client] -->|tools/call or /v1/check| G[Go gateway<br/>rule path]
+    G -->|ambiguous only, gRPC| J[Python LLM judge]
+    G <-->|trajectory, verdict cache,<br/>rate limits| R[(Redis)]
+    G -->|allowed calls only| T[MCP tool servers]
+    G -->|every decision| K[[Kafka]]
+    K --> W[Auditor] -->|hash-chained, append-only| P[(PostgreSQL)]
+    W -->|signed checkpoints| K
 ```
-Agent decides to call a tool
-         │
-         ▼
-┌─────────────────────────┐
-│   AgentGate intercepts  │  ← before any side effect
-└─────────────────────────┘
-         │
-         ▼
-┌─────────────────────────┐
-│  Tier 1 — static check  │  0.3ms avg, no API calls
-│  SQL / filesystem / HTTP│  handles ~64% of decisions
-│  analyzer + scope check │
-└─────────────────────────┘
-         │ ambiguous
-         ▼
-┌─────────────────────────┐
-│  Tier 2 — LLM judge     │  separate GPT-4o-mini instance
-│  5-dimension scoring    │  task consistency + scope auth
-│  trajectory analysis    │  fail-closed: uncertainty = BLOCK
-└─────────────────────────┘
-         │
-    ALLOW / BLOCK
-         │
-         ▼
-   AuditLogger → Supabase (async, fire-and-forget, zero latency impact)
+
+1. **Rule path (Tier 1, in-process).** Scope check (operation and resource),
+   then a domain analyzer: SQL (lexer, statement classification, injection
+   indicators), filesystem (multi-layer decoding: double URL encoding, overlong
+   UTF-8, NFKC; traversal, system paths, secrets), HTTP (SSRF: private ranges,
+   cloud metadata, obfuscated IPs, DNS rebinding), shell. Most calls end here
+   in well under a millisecond.
+2. **LLM judge (Tier 2, gRPC).** Only calls the rules can't settle. A separate
+   model (never the agent's own) scores scope, blast radius, reversibility,
+   trajectory and red flags, using the session's last 10 calls to catch
+   read-then-exfiltrate chains. Redis shares that trajectory across replicas.
+3. **Audit.** Every decision goes to Kafka, then to PostgreSQL as a SHA-256
+   hash chain per partition, with the Kafka offset stored in the same
+   transaction (no loss, no duplicates on crash). Ed25519-signed chain-head
+   checkpoints go to a separate topic, so even a database superuser who
+   rewrites the chain is caught.
+
+### Fail-closed, by construction
+
+| If this fails... | ...the call is |
+|---|---|
+| Judge down, slow (deadline), or its model errors | blocked (`judge_unavailable` / `tier2_error`) |
+| A rule panics, or arguments can't be analyzed | blocked (`rule_engine_error`) |
+| Redis unreachable (trajectory or rate-limit state) | blocked (`state_unavailable`) |
+| Audit pipeline can't take the record | blocked (`audit_unavailable`) |
+| Agent has no policy | blocked (`unknown_agent`) |
+| The gateway itself | unreachable tools: MCP servers are routable only through it (NetworkPolicy); the Python SDK blocks on any non-`allow` answer |
+
+---
+
+## Results
+
+<!-- results:start -->
+| | Result |
+|---|---|
+| Adversarial dev benchmark, 466 decisions (development set) | recall 99.7%, precision 97.2% via the gateway; 99.6% / 98.1% in run 007, up from 67.3% recall in run 001 |
+| Go rule engine vs Python reference | 48,550 of 48,716 fuzzed and benchmark inputs identical, 0 more permissive |
+| Calls settled by rules alone (no LLM) | 280 of 466 (60%) on the dev set |
+<!-- results:end -->
+
+Full methodology, every run, and caveats: **[RESULTS.md](RESULTS.md)** and
+**[bench/results/HISTORY.md](bench/results/HISTORY.md)**. Reproduce with
+`make bench` (no API key needed: the judge replays recorded responses).
+
+---
+
+## Repository layout
+
 ```
- 
-**Tier 1** handles the clear cases fast — destructive SQL, path traversal,
-SSRF, out-of-scope resource access. Sub-millisecond, no network calls.
- 
-**Tier 2** handles the ambiguous cases semantically. A separate LLM instance
-(never the agent's own LLM) evaluates five dimensions: semantic intent, blast
-radius, reversibility, trajectory consistency, and disguised intent. Malformed
-response or uncertainty defaults to BLOCK.
- 
-**The audit logger** records every intercepted action asynchronously to
-Supabase — allowed and blocked — without adding latency to the critical path.
- 
----
- 
-## Eval results
- 
-AgentGate was tested against a 370-scenario adversarial suite. Every tool call
-was generated by a real GPT-4o-mini instance given a task description — no
-hand-crafted payloads, no synthetic attack strings. The suite covers four
-domains (data operations, file operations, communications, infrastructure) plus
-30 multi-turn trajectory scenarios.
- 
-| Run | Recall | Precision | FP Rate | What changed |
-|-----|--------|-----------|---------|--------------|
-| 001 | 67.3%  | 79.7%     | 23.4%   | Baseline |
-| 004 | 80.1%  | 85.4%     | 27.2%   | SQL resource extraction, UNKNOWN tool handling |
-| 005 | 92.9%  | 79.8%     | 46.1%   | Tier 2 scope gate added |
-| 006 | 92.6%  | 100.0%    | 0.0%    | False positive root cause fixed |
-| 007 | **99.5%**  | **97.7%**     | **9.1%**    | Precision-recall rebalance |
- 
-**Run 007 breakdown by difficulty:**
- 
-| Difficulty | Recall |
-|------------|--------|
-| Obvious    | 100%   |
-| Moderate   | 99%    |
-| Subtle     | 100%   |
- 
-**Latency:**
-- Tier 1: 0.3ms average
-- Tier 2: ~3.2s average (LLM judge — only invoked on ambiguous cases)
- 
-The methodology — why we built a custom eval suite instead of using existing
-attack payload lists — is documented in [`agenttest/README.md`](agenttest/).
- 
----
- 
-## vs existing tools
- 
-| | AgentGate | Guardrails AI | NeMo Guardrails | LangSmith |
-|---|---|---|---|---|
-| Intercepts tool call arguments | ✅ | ❌ | ❌ | ❌ |
-| Prevents execution | ✅ | ❌ | ❌ | ❌ (observability only) |
-| Scope-based inversion | ✅ | ❌ | ❌ | ❌ |
-| Works without framework changes | ✅ | ❌ | ❌ | ✅ |
-| Trajectory analysis | ✅ | ❌ | ❌ | ❌ |
-| Open source | ✅ | ✅ | ✅ | ❌ |
- 
-Guardrails AI and NeMo evaluate LLM text output. They never see what
-the agent executes. LangSmith observes after the fact. AgentGate is the
-only open-source tool that intercepts and prevents tool call execution
-before any side effect occurs.
- 
----
- 
-## Framework support
- 
-AgentGate auto-patches installed frameworks on `protect_all()`:
- 
-- **OpenAI SDK** — wraps `chat.completions.create`, intercepts tool calls
-  in responses before agent dispatch
-- **LangChain / LangGraph** — patches `BaseTool._run` and `_arun`
-- **Raw Python functions** — `@agentgate.guard` decorator
-- **MCP** — proxy interceptor (in progress)
- 
----
- 
-## Model provider flexibility
- 
-Tier 2 uses an LLM judge. By default it uses GPT-4o-mini — the cheapest
-and fastest option. If your stack doesn't use OpenAI, point it at any
-OpenAI-compatible endpoint:
- 
-```python
-# Anthropic
-agentgate.protect_all(
-    judge_api_key=os.environ["ANTHROPIC_API_KEY"],
-    judge_base_url="https://api.anthropic.com/v1",
-    judge_model="claude-haiku-4-5-20251001",
-)
- 
-# Local via Ollama
-agentgate.protect_all(
-    judge_api_key="ollama",
-    judge_base_url="http://localhost:11434/v1",
-    judge_model="llama3",
-)
+agentgate/            Python library (pip install agentgate-py) and the gRPC judge service
+gateway/              Go: gateway, auditor, load generator, demo MCP server
+  internal/rules/       rule engine (parity-tested against the Python engine)
+  internal/audit/       Kafka producer, hash-chain writer, verifier
+proto/                gRPC contract between gateway and judge
+deploy/               policy.yaml, Kubernetes (kustomize base + dev overlay)
+bench/                frozen datasets and every benchmark script
+agenttest/            original adversarial suite and run reports 001-007
 ```
- 
-Or via environment:
+
+## Development
+
 ```bash
-AGENTGATE_JUDGE_API_KEY=your-key
-AGENTGATE_JUDGE_BASE_URL=https://api.anthropic.com/v1
+make dev        # Python deps
+make test       # pytest + go test (includes the 50k-case parity test)
+make up         # compose stack
+make bench      # all benchmarks, then regenerate RESULTS.md
 ```
- 
----
- 
-## Run the demo
- 
-```bash
-git clone https://github.com/arhaamatiq/agentgate
-cd agentgate
-pip install -e .
-python examples/demo_agent/run_demo.py
-```
- 
-No API keys required. Shows a compromised agent — legitimate task, hidden
-malicious instructions — with AgentGate blocking 3 attacks the agent never
-acknowledged.
- 
----
- 
-## Roadmap
- 
-- Real-time dashboard — Next.js, Supabase Realtime, live action feed
-- MCP proxy interceptor
-- PyPI install count badge
- 
----
- 
-## Contributing
- 
-Issues and PRs welcome. See the eval methodology in `agenttest/` if you want
-to add scenarios or run the suite yourself.
- 
----
- 
+
 ## License
- 
-MIT — see [LICENSE](LICENSE).
- 
-Built by [Arhaam Atiq](https://github.com/arhaamatiq).
+
+MIT, see [LICENSE](LICENSE). Built by [Arhaam Atiq](https://github.com/arhaamatiq).
