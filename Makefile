@@ -69,7 +69,7 @@ bench-accuracy-native:
 bench-perf:
 	./bench/perf/run_perf.sh
 	AGENTGATE_AUDIT_MODE=sync docker compose up -d gateway
-	DUR=30s AGENTGATE_AUDIT_MODE=sync ./bench/perf/run_perf.sh
+	DUR=30s RATES=1000 CLOSED=0 AGENTGATE_AUDIT_MODE=sync ./bench/perf/run_perf.sh
 	docker compose up -d gateway
 	cd gateway && go test ./internal/rules/ -run XXX -bench EvaluateDevSet -benchtime 5s | grep -E "Benchmark|cpu:" > ../bench/results/perf/engine_bench.txt
 

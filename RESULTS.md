@@ -8,11 +8,13 @@ Every number below is read from a result file written by a committed script
 
 | Claim | Measured | Source |
 |---|---|---|
-| Rule-path p99 at 1,000 req/s | **NOT YET MEASURED** | `bench/perf/run_perf.sh` |
-| Max throughput | **NOT YET MEASURED** | `bench/perf/run_perf.sh` |
-| Decisions streamed with zero loss | **NOT YET MEASURED** | `bench/stream/run_stream.py` |
-| Chain verification catches edited/deleted rows | **NOT YET MEASURED** | `bench/stream/tamper.py` |
-| Fail-closed under component failure | **NOT YET MEASURED** | `bench/failclosed/run_failclosed.py` |
+| Decision latency at 1,000 req/s, inside the gateway (p99) | **0.58 ms** | [`bench/results/perf/open_1000rps_async.json`](bench/results/perf/open_1000rps_async.json) |
+| Decision latency at 5,000 req/s, inside the gateway (p99) | **1.90 ms** | [`bench/results/perf/open_5000rps_async.json`](bench/results/perf/open_5000rps_async.json) |
+| Latency at 1,000 req/s, end to end through the full stack (p99) | **7.93 ms** (p50 1.10 ms) | [`bench/results/perf/open_1000rps_async.json`](bench/results/perf/open_1000rps_async.json) |
+| Max throughput, one gateway replica (closed loop, 64 clients) | **17,258 req/s** (p99 18.00 ms, 0 errors) | [`bench/results/perf/closed_64w_async.json`](bench/results/perf/closed_64w_async.json) |
+| Decisions streamed gateway → Kafka → Postgres | **25,000**, 0 lost, 0 duplicated, with 2 injected faults | [`bench/results/stream/stream_25000.json`](bench/results/stream/stream_25000.json) |
+| Tamper detection (edited, deleted, truncated, rewritten, forged rows) | **6/6 attacks detected**; untampered copy verifies clean | [`bench/results/tamper/tamper.json`](bench/results/tamper/tamper.json) |
+| Fail-closed under component failure | **8/8 scenarios blocked**, 0 calls reached the tool server | [`bench/results/failclosed/failclosed.json`](bench/results/failclosed/failclosed.json) |
 | Dev benchmark through the gateway (all 466 decisions) | **recall 99.7%, precision 97.2%** | [`bench/results/accuracy/dev_live_r1.json`](bench/results/accuracy/dev_live_r1.json) |
 | Run 007 as published (Python, 393 of 466 decisions scored) | recall 99.6%, precision 98.1% | [`bench/results/accuracy/dev_live_r1.json`](bench/results/accuracy/dev_live_r1.json) (re-derived) |
 | Go engine vs Python reference | 48,550/48,716 identical; 0 where Go is more permissive | [`bench/results/parity.json`](bench/results/parity.json) |
@@ -67,18 +69,67 @@ What this shows:
 
 ## Latency and throughput
 
-**NOT YET MEASURED** — run `bench/perf/run_perf.sh` with the stack up.
+Load generator: [`gateway/cmd/agentgate-loadgen`](gateway/cmd/agentgate-loadgen/main.go), run as a
+container on the compose network against one gateway replica. Payloads are
+the dev-set tool calls the rule path decides on its own. Every request runs
+the full pipeline: rules, a Redis trajectory write, and a Kafka audit produce.
+Open-loop runs measure from each request's scheduled send time, so queueing
+shows up as latency (no coordinated omission). "Inside the gateway" is the
+decision time the gateway reports per request.
+
+| Load | Achieved | p50 | p90 | p99 | p99.9 | p99 inside gateway | Errors | Source |
+|---|---:|---:|---:|---:|---:|---:|---:|---|
+| 1,000 req/s | 1000/s | 1.10 ms | 2.27 ms | 7.93 ms | 70.78 ms | 0.58 ms | 0 | [`bench/results/perf/open_1000rps_async.json`](bench/results/perf/open_1000rps_async.json) |
+| 2,000 req/s | 2000/s | 1.18 ms | 3.45 ms | 25.50 ms | 62.41 ms | 0.98 ms | 0 | [`bench/results/perf/open_2000rps_async.json`](bench/results/perf/open_2000rps_async.json) |
+| 5,000 req/s | 5000/s | 0.99 ms | 13.74 ms | 307.57 ms | 399.46 ms | 1.90 ms | 0 | [`bench/results/perf/open_5000rps_async.json`](bench/results/perf/open_5000rps_async.json) |
+| 1,000 req/s, sync audit | 1000/s | 1.49 ms | 4.78 ms | 27.43 ms | 113.29 ms | 0.78 ms | 0 | [`bench/results/perf/open_1000rps_sync.json`](bench/results/perf/open_1000rps_sync.json) |
+| closed loop, 64 clients | 17258/s | 2.69 ms | 7.40 ms | 18.00 ms | 37.19 ms | 2.59 ms | 0 | [`bench/results/perf/closed_64w_async.json`](bench/results/perf/closed_64w_async.json) |
+
+Rule engine alone (`go test -bench`, dev-set calls, one core):
+
+```
+cpu: Apple M1 Pro
+BenchmarkEvaluateDevSet-8   	  199278	     26858 ns/op	    1505 B/op	      24 allocs/op
+```
 
 ## Audit pipeline
 
-**NOT YET MEASURED** — run `bench/stream/run_stream.py`.
+[`bench/stream/run_stream.py`](bench/stream/run_stream.py) sent **25,000 decisions** across both gateway replicas while injecting the faults below. It drives the gateways from the host through Docker Desktop's port forwarding (25/s); throughput is measured inside the compose network above.
 
-**NOT YET MEASURED** — run `bench/stream/tamper.py`.
+- auditor SIGKILL + restart
+- kafka broker restart
+
+Result: **0 missing, 0 duplicated**; verifier INTACT over 25,466 rows, 25,466 matched byte-for-byte to their Kafka records, 147 signed checkpoints verified.
+
+[`bench/stream/tamper.py`](bench/stream/tamper.py): append-only enforcement, then attacks by a
+database superuser (triggers disabled) on a copy of the log:
+
+| Check | Result |
+|---|---|
+| `writer_update` | rejected |
+| `owner_update` | rejected |
+| `owner_delete` | rejected |
+| `owner_truncate` | rejected |
+| control copy, no attack | clean |
+| `edit_event` | **detected**: hash_mismatch, kafka_source_mismatch |
+| `edit_column` | **detected**: column_mismatch |
+| `delete_middle` | **detected**: broken_link, missing_rows |
+| `truncate_tail` | **detected**: checkpoint_row_missing |
+| `rewrite_chain` | **detected**: checkpoint_mismatch, kafka_source_mismatch |
+| `forge_append` | **detected**: no_kafka_source |
 
 ## Fail-closed
 
-**NOT YET MEASURED** — run `bench/failclosed/run_failclosed.py`. Unit-level coverage of every fail-closed path
-runs in `go test ./...` (`internal/gateway/gateway_test.go`, `internal/rules/engine_test.go`).
+| Scenario | Result | Detail |
+|---|---|---|
+| control_all_up | pass | allowed; 1 tool execution |
+| judge_down | pass | judge_unavailable |
+| judge_hung | pass | judge_unavailable |
+| judge_llm_error | pass | tier2_error |
+| redis_down | pass | state_unavailable, state_unavailable |
+| audit_down_sync | pass | audit_unavailable |
+| gateway_down | pass | SDK: BLOCKED gateway_unavailable; direct to tool server: UNREACHABLE URLError |
+| rule_fault | pass | rule_engine_error, rule_engine_error |
 
 ## Go/Python parity
 

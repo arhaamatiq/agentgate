@@ -1,0 +1,2 @@
+cpu: Apple M1 Pro
+BenchmarkEvaluateDevSet-8   	  199278	     26858 ns/op	    1505 B/op	      24 allocs/op

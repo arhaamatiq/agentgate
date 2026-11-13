@@ -78,14 +78,17 @@ def main() -> None:
     w("| Claim | Measured | Source |")
     w("|---|---|---|")
     if p1k:
-        w(f"| Rule-path latency at 1,000 req/s, full stack (end-to-end p99) | **{p1k['latency_ms']['p99']:.2f} ms** "
-          f"(p50 {p1k['latency_ms']['p50']:.2f} ms) | {src('perf/open_1000rps_async.json')} |")
-        w(f"| Rule-path latency at 1,000 req/s, inside the gateway (p99) | **{p1k['server_decision_ms']['p99']:.2f} ms** "
+        w(f"| Decision latency at 1,000 req/s, inside the gateway (p99) | **{p1k['server_decision_ms']['p99']:.2f} ms** "
           f"| {src('perf/open_1000rps_async.json')} |")
+        if p5k:
+            w(f"| Decision latency at 5,000 req/s, inside the gateway (p99) | **{p5k['server_decision_ms']['p99']:.2f} ms** "
+              f"| {src('perf/open_5000rps_async.json')} |")
+        w(f"| Latency at 1,000 req/s, end to end through the full stack (p99) | **{p1k['latency_ms']['p99']:.2f} ms** "
+          f"(p50 {p1k['latency_ms']['p50']:.2f} ms) | {src('perf/open_1000rps_async.json')} |")
     else:
         w(f"| Rule-path p99 at 1,000 req/s | {MISSING} | `bench/perf/run_perf.sh` |")
     if pmax:
-        w(f"| Max throughput, one gateway replica (closed loop, 64 clients) | **{pmax['achieved_rps']:.0f} req/s** "
+        w(f"| Max throughput, one gateway replica (closed loop, 64 clients) | **{pmax['achieved_rps']:,.0f} req/s** "
           f"(p99 {pmax['latency_ms']['p99']:.2f} ms, {pmax['errors']} errors) | {src('perf/closed_64w_async.json')} |")
     else:
         w(f"| Max throughput | {MISSING} | `bench/perf/run_perf.sh` |")
@@ -217,7 +220,9 @@ def main() -> None:
     w("")
     if stream:
         w(f"[`bench/stream/run_stream.py`](bench/stream/run_stream.py) sent **{stream['decisions_sent']:,} decisions** "
-          f"across both gateway replicas at {stream['send_rate_per_s']:.0f}/s while injecting:")
+          f"across both gateway replicas while injecting the faults below. It drives the gateways from the "
+          f"host through Docker Desktop's port forwarding ({stream['send_rate_per_s']:.0f}/s); throughput is "
+          f"measured inside the compose network above.")
         w("")
         for f in stream["faults_injected"]:
             w(f"- {f['fault']}")
@@ -253,8 +258,14 @@ def main() -> None:
         w("| Scenario | Result | Detail |")
         w("|---|---|---|")
         for s in fc["scenarios"]:
-            detail = ", ".join(f"{c.get('policy')}" for c in s.get("calls", [])) or \
-                f"SDK: {s.get('python_sdk')}; direct to tool server: {s.get('agent_direct_to_tool_server')}"
+            sdk = (s.get("python_sdk") or "").strip().splitlines()
+            policies = [c["policy"] for c in s.get("calls", []) if c.get("policy")]
+            if policies:
+                detail = ", ".join(policies)
+            elif sdk:
+                detail = f"SDK: {sdk[-1].strip()}; direct to tool server: {s.get('agent_direct_to_tool_server')}"
+            else:
+                detail = f"allowed; {s.get('tool_server_executions_during')} tool execution"
             w(f"| {s['scenario']} | {'pass' if s['pass'] else '**FAIL**'} | {detail} |")
         w("")
     else:
@@ -289,16 +300,19 @@ def main() -> None:
     w("- The dev benchmark's ground-truth labels come from run 007's hybrid evaluator")
     w("  (rules plus a gpt-4o-mini reviewer); they are not human-adjudicated.")
     (ROOT / "RESULTS.md").write_text("\n".join(L) + "\n")
-    readme_block(dev, parity, p1k, pmax, stream, tamper, fc)
+    readme_block(dev, parity, p1k, p5k, pmax, stream, tamper, fc)
     print("\n".join(L))
 
 
-def readme_block(dev, parity, p1k, pmax, stream, tamper, fc) -> None:
+def readme_block(dev, parity, p1k, p5k, pmax, stream, tamper, fc) -> None:
     """Rewrite the results table between the markers in README.md."""
     rows = ["| | Result |", "|---|---|"]
     if p1k:
-        rows.append(f"| Rule-path latency, 1,000 req/s through the full stack | p99 {p1k['latency_ms']['p99']:.2f} ms end-to-end, "
-                    f"{p1k['server_decision_ms']['p99']:.2f} ms inside the gateway |")
+        lat = f"p99 {p1k['server_decision_ms']['p99']:.2f} ms at 1,000 req/s"
+        if p5k:
+            lat += f", {p5k['server_decision_ms']['p99']:.2f} ms at 5,000 req/s"
+        rows.append(f"| Decision latency inside the gateway (rules, Redis state, Kafka audit produce) | {lat}; "
+                    f"{p1k['latency_ms']['p99']:.2f} ms end to end at 1,000 req/s |")
     if pmax:
         rows.append(f"| Throughput, one gateway replica | {pmax['achieved_rps']:,.0f} req/s |")
     if stream:

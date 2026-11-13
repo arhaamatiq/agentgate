@@ -1,0 +1,40 @@
+{
+  "date": "2026-11-12T13:35:06+00:00",
+  "decisions_sent": 25000,
+  "client_errors": 0,
+  "verdicts": {
+    "allow": 10253,
+    "block": 14747
+  },
+  "gateways": [
+    "http://localhost:8080",
+    "http://localhost:8081"
+  ],
+  "faults_injected": [
+    {
+      "fault": "auditor SIGKILL + restart",
+      "seconds": 0.9
+    },
+    {
+      "fault": "kafka broker restart",
+      "seconds": 1.4
+    }
+  ],
+  "send_seconds": 1005.3,
+  "send_rate_per_s": 24.9,
+  "rows_stored_for_run": 25000,
+  "missing": 0,
+  "duplicates_in_table": 0,
+  "missing_sample": [],
+  "verifier": {
+    "ok": true,
+    "chains": 3,
+    "rows_verified": 25466,
+    "rows_cross_checked_with_kafka": 25466,
+    "checkpoints_verified": 147,
+    "checkpoints_signed": true,
+    "problems": null
+  },
+  "zero_loss": true,
+  "zero_duplicates": true
+}

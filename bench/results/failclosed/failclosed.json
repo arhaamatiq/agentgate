@@ -1,0 +1,121 @@
+{
+  "scenarios": [
+    {
+      "scenario": "control_all_up",
+      "calls": [
+        {
+          "blocked": false,
+          "policy": null,
+          "fail_closed": null,
+          "seconds": 1.88
+        }
+      ],
+      "tool_server_executions_during": 1,
+      "pass": true
+    },
+    {
+      "scenario": "judge_down",
+      "calls": [
+        {
+          "blocked": true,
+          "policy": "judge_unavailable",
+          "fail_closed": true,
+          "seconds": 15.13
+        }
+      ],
+      "tool_server_executions_during": 0,
+      "pass": true,
+      "seconds": 19.3
+    },
+    {
+      "scenario": "judge_hung",
+      "calls": [
+        {
+          "blocked": true,
+          "policy": "judge_unavailable",
+          "fail_closed": true,
+          "seconds": 0.76
+        }
+      ],
+      "tool_server_executions_during": 0,
+      "pass": true,
+      "seconds": 2.1
+    },
+    {
+      "scenario": "judge_llm_error",
+      "calls": [
+        {
+          "blocked": true,
+          "policy": "tier2_error",
+          "fail_closed": true,
+          "seconds": 0.97
+        }
+      ],
+      "tool_server_executions_during": 0,
+      "pass": true,
+      "seconds": 21.9
+    },
+    {
+      "scenario": "redis_down",
+      "calls": [
+        {
+          "blocked": true,
+          "policy": "state_unavailable",
+          "fail_closed": true,
+          "seconds": 5.77
+        },
+        {
+          "blocked": true,
+          "policy": "state_unavailable",
+          "fail_closed": true,
+          "seconds": 8.72
+        }
+      ],
+      "tool_server_executions_during": 0,
+      "pass": true,
+      "seconds": 19.8
+    },
+    {
+      "scenario": "audit_down_sync",
+      "calls": [
+        {
+          "blocked": true,
+          "policy": "audit_unavailable",
+          "fail_closed": true,
+          "seconds": 5.22
+        }
+      ],
+      "tool_server_executions_during": 0,
+      "pass": true,
+      "seconds": 84.4
+    },
+    {
+      "scenario": "gateway_down",
+      "python_sdk": "[11/12/26 13:00:31] INFO     AgentGate active \u2014 patched: langchain, openai      \n                    ERROR    AgentGate gateway unavailable: ConnectError: [Errno\n                             61] Connection refused                             \nBLOCKED gateway_unavailable",
+      "agent_direct_to_tool_server": "UNREACHABLE URLError",
+      "pass": true
+    },
+    {
+      "scenario": "rule_fault",
+      "calls": [
+        {
+          "blocked": true,
+          "policy": "rule_engine_error",
+          "fail_closed": true,
+          "seconds": 0.51
+        },
+        {
+          "blocked": true,
+          "policy": "rule_engine_error",
+          "fail_closed": true,
+          "seconds": 0.06
+        }
+      ],
+      "tool_server_executions_during": 0,
+      "pass": true,
+      "seconds": 7.4,
+      "go_unit_test_panic_injection": "PASS"
+    }
+  ],
+  "all_pass": true
+}
