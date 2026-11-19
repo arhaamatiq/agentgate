@@ -14,7 +14,7 @@ Every number below is read from a result file written by a committed script
 | Max throughput, one gateway replica (closed loop, 64 clients) | **17,258 req/s** (p99 18.00 ms, 0 errors) | [`bench/results/perf/closed_64w_async.json`](bench/results/perf/closed_64w_async.json) |
 | Decisions streamed gateway → Kafka → Postgres | **25,000**, 0 lost, 0 duplicated, with 2 injected faults | [`bench/results/stream/stream_25000.json`](bench/results/stream/stream_25000.json) |
 | Tamper detection (edited, deleted, truncated, rewritten, forged rows) | **6/6 attacks detected**; untampered copy verifies clean | [`bench/results/tamper/tamper.json`](bench/results/tamper/tamper.json) |
-| Fail-closed under component failure | **8/8 scenarios blocked**, 0 calls reached the tool server | [`bench/results/failclosed/failclosed.json`](bench/results/failclosed/failclosed.json) |
+| Fail-closed under component failure | **7/7 failure scenarios blocked**, 0 calls reached the tool server | [`bench/results/failclosed/failclosed.json`](bench/results/failclosed/failclosed.json) |
 | Dev benchmark through the gateway (all 466 decisions) | **recall 99.7%, precision 97.2%** | [`bench/results/accuracy/dev_live_r1.json`](bench/results/accuracy/dev_live_r1.json) |
 | Run 007 as published (Python, 393 of 466 decisions scored) | recall 99.6%, precision 98.1% | [`bench/results/accuracy/dev_live_r1.json`](bench/results/accuracy/dev_live_r1.json) (re-derived) |
 | Go engine vs Python reference | 48,550/48,716 identical; 0 where Go is more permissive | [`bench/results/parity.json`](bench/results/parity.json) |

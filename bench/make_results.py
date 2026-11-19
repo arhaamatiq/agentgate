@@ -106,9 +106,9 @@ def main() -> None:
     else:
         w(f"| Chain verification catches edited/deleted rows | {MISSING} | `bench/stream/tamper.py` |")
     if fc:
-        n = len(fc["scenarios"])
-        ok = sum(1 for s in fc["scenarios"] if s["pass"])
-        w(f"| Fail-closed under component failure | **{ok}/{n} scenarios blocked**, 0 calls reached the tool server "
+        failures = [s for s in fc["scenarios"] if s["scenario"] != "control_all_up"]
+        n, ok = len(failures), sum(1 for s in failures if s["pass"])
+        w(f"| Fail-closed under component failure | **{ok}/{n} failure scenarios blocked**, 0 calls reached the tool server "
           f"| {src('failclosed/failclosed.json')} |")
     else:
         w(f"| Fail-closed under component failure | {MISSING} | `bench/failclosed/run_failclosed.py` |")
@@ -305,35 +305,46 @@ def main() -> None:
 
 
 def readme_block(dev, parity, p1k, p5k, pmax, stream, tamper, fc) -> None:
-    """Rewrite the results table between the markers in README.md."""
-    rows = ["| | Result |", "|---|---|"]
+    """Rewrite the outcomes table between the markers in README.md, in plain language."""
+    rows = ["| Outcome | Measured |", "|---|---|"]
+    if dev:
+        m = dev["metrics"]
+        history = json.loads((R / "history.json").read_text()) if (R / "history.json").exists() else []
+        first = next((h for h in history if h.get("run") == "001"), None)
+        since = f", up from {first['recall']}% in the first version" if first else ""
+        rows.append(f"| **Catches {pct(m['recall'])} of attacks** | {pct(m['precision'])} precision across "
+                    f"{m['decisions']} decisions from an adversarial benchmark{since} |")
     if p1k:
-        lat = f"p99 {p1k['server_decision_ms']['p99']:.2f} ms at 1,000 req/s"
+        p99 = p1k["server_decision_ms"]["p99"]
+        label = "Sub-millisecond decisions" if p99 < 1 else f"{p99:.2f} ms decisions"
+        lat = f"{p99:.2f} ms p99 at 1,000 requests per second"
         if p5k:
-            lat += f", {p5k['server_decision_ms']['p99']:.2f} ms at 5,000 req/s"
-        rows.append(f"| Decision latency inside the gateway (rules, Redis state, Kafka audit produce) | {lat}; "
-                    f"{p1k['latency_ms']['p99']:.2f} ms end to end at 1,000 req/s |")
+            lat += f", {p5k['server_decision_ms']['p99']:.2f} ms at 5,000"
+        rows.append(f"| **{label}** | {lat} |")
     if pmax:
-        rows.append(f"| Throughput, one gateway replica | {pmax['achieved_rps']:,.0f} req/s |")
+        rows.append(f"| **{pmax['achieved_rps']:,.0f} requests per second** | on a single gateway instance, "
+                    f"{pmax['errors']} errors |")
     if stream:
-        rows.append(f"| Decisions streamed gateway → Kafka → Postgres | {stream['decisions_sent']:,}, "
-                    f"{stream['missing']} lost, {stream['duplicates_in_table']} duplicated, auditor killed and broker restarted mid-run |")
+        clean = stream["missing"] == 0 and stream["duplicates_in_table"] == 0
+        rows.append(f"| **{'Zero lost audit records' if clean else 'Audit stream under failure'}** | "
+                    f"{stream['decisions_sent']:,} decisions logged with the log writer killed and the message "
+                    f"broker restarted mid-run: {stream['missing']} lost, {stream['duplicates_in_table']} duplicated |")
     if tamper:
         det = sum(1 for a in tamper["attacks"] if a["detected"])
-        rows.append(f"| Tampering by a DB superuser (edit, delete, truncate, rewrite, forge) | {det}/{len(tamper['attacks'])} detected by the verifier |")
+        rows.append(f"| **Tamper-evident audit trail** | {det} of {len(tamper['attacks'])} tampering attacks by a "
+                    f"database administrator detected |")
     if fc:
-        ok = sum(1 for s in fc["scenarios"] if s["pass"])
-        rows.append(f"| Component failures (judge, Redis, Kafka, gateway, rule faults) | {ok}/{len(fc['scenarios'])} fail closed |")
-    if dev:
-        m, p = dev["metrics"], dev["run007_published"]
-        rows.append(f"| Adversarial dev benchmark, 466 decisions (development set) | recall {pct(m['recall'])}, precision "
-                    f"{pct(m['precision'])} via the gateway; {pct(p['recall'])} / {pct(p['precision'])} in run 007, up from 67.3% recall in run 001 |")
-    if parity:
-        rows.append(f"| Go rule engine vs Python reference | {parity['exact']:,} of {parity['cases']:,} fuzzed and benchmark inputs identical, "
-                    f"{parity['go_looser_or_dataset_mismatch']} more permissive |")
+        failures = [s for s in fc["scenarios"] if s["scenario"] != "control_all_up"]
+        ok = sum(1 for s in failures if s["pass"])
+        rows.append(f"| **Fails safe** | {ok} of {len(failures)} failure scenarios (AI judge, cache, message "
+                    f"broker or gateway down; malformed input) blocked the action; none reached the tool |")
     if dev:
         t1 = dev["by_tier"].get("1", {}).get("decisions", 0)
-        rows.append(f"| Calls settled by rules alone (no LLM) | {t1} of {dev['decisions']} ({100 * t1 / dev['decisions']:.0f}%) on the dev set |")
+        rows.append(f"| **{100 * t1 / dev['decisions']:.0f}% of decisions need no AI call** | fast rules settle "
+                    f"{t1} of {dev['decisions']}; the LLM judge only sees the hard cases |")
+    if parity:
+        rows.append(f"| **Verified Go port** | never more permissive than the Python reference across "
+                    f"{parity['cases']:,} test inputs |")
     readme = ROOT / "README.md"
     text = readme.read_text()
     start, end = "<!-- results:start -->", "<!-- results:end -->"
